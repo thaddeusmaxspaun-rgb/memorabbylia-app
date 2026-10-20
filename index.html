@@ -283,17 +283,25 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      lucide.createIcons();
-      renderInventory();
+  lucide.createIcons();
+  renderInventory();
 
-      const html5QrCode = new Html5QrcodeScanner("reader", {
-        fps: 10,
-        qrbox: { width: 200, height: 200 },
-        rememberLastUsedCamera: true
-      });
-
-      html5QrCode.render(handleScanSuccess);
-    });
+  const html5QrCode = new Html5Qrcode("reader");
+  
+  // Force phone to use environment/back camera facing mode
+  const config = { fps: 10, qrbox: { width: 200, height: 200 } };
+  
+  html5QrCode.start(
+    { facingMode: "environment" }, // Forces back camera
+    config,
+    handleScanSuccess
+  ).catch(err => {
+    console.warn("Back camera constraint failed, falling back to scanner default:", err);
+    // Fallback if environment facing mode fails on older browsers
+    const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 200, height: 200 } });
+    scanner.render(handleScanSuccess);
+  });
+});
   </script>
 </body>
 </html>
