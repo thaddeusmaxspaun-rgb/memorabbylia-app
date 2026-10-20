@@ -1,325 +1,607 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MemorABBYlia Souvenir Shop Inventory</title>
-  <!-- HTML5 QR Code Library -->
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <style>
-    #reader video { object-fit: cover; border-radius: 0.75rem; width: 100% !important; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemorABBYlia Souvenir QR Inventory Scanner</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- HTML5 QR Code Library (Camera & Back Camera Handling) -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <!-- QRCode JS for Generator -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        #reader video { object-fit: cover !important; border-radius: 0.75rem; }
+    </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans pb-20">
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
 
-  <!-- Header -->
-  <header class="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-50 flex items-center justify-between">
-    <div class="flex items-center space-x-2">
-      <i data-lucide="gift" class="w-6 h-6 text-amber-400"></i>
-      <h1 class="font-bold text-lg text-white">MemorABBYlia Souvenirs</h1>
+    <!-- Header Navigation -->
+    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-indigo-600 text-white rounded-lg shadow">
+                    <i class="fa-solid fa-qrcode text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold leading-tight text-white">MemorABBYlia Souvenirs</h1>
+                    <p class="text-xs text-slate-400">QR Inventory & Auto-Sync System</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <button onclick="openConfigModal()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium rounded-lg border border-slate-600 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-link text-emerald-400"></i> Google Sheets Webhook
+                </button>
+                <button onclick="resetDataPrompt()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg border border-slate-600 transition">
+                    <i class="fa-solid fa-rotate"></i> Reset
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+        <!-- Top Section: Scanner & Controls -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Scanner Panel (Left) -->
+            <div class="lg:col-span-6 bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
+                
+                <div class="flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-camera text-indigo-400"></i> Rear Camera Scanner
+                    </h2>
+                    <span id="scanStatusBadge" class="px-2.5 py-1 text-xs rounded-full bg-slate-700 text-slate-300 font-medium">
+                        Ready
+                    </span>
+                </div>
+
+                <!-- Mode Toggles: Stock In vs Stock Out -->
+                <div class="grid grid-cols-2 gap-3 p-1.5 bg-slate-900/80 rounded-xl border border-slate-700">
+                    <button id="modeInBtn" onclick="setScanMode('IN')" class="py-2.5 px-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition bg-emerald-600 text-white shadow">
+                        <i class="fa-solid fa-circle-plus text-base"></i> Dagdag Stock (+ IN)
+                    </button>
+                    <button id="modeOutBtn" onclick="setScanMode('OUT')" class="py-2.5 px-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition bg-slate-800 text-slate-400 hover:text-slate-200">
+                        <i class="fa-solid fa-circle-minus text-base"></i> Bawas Stock (- OUT)
+                    </button>
+                </div>
+
+                <!-- Quantity Step -->
+                <div class="flex items-center justify-between bg-slate-900/50 p-3 rounded-xl border border-slate-700">
+                    <label class="text-xs font-medium text-slate-300">Dami bawat Scan (Qty Per Scan):</label>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="adjustScanQty(-1)" class="w-8 h-8 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold flex items-center justify-center">-</button>
+                        <input type="number" id="scanQtyInput" value="1" min="1" class="w-16 text-center bg-slate-800 border border-slate-600 rounded-lg py-1 font-bold text-emerald-400 focus:outline-none">
+                        <button onclick="adjustScanQty(1)" class="w-8 h-8 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold flex items-center justify-center">+</button>
+                    </div>
+                </div>
+
+                <!-- QR Camera Viewport -->
+                <div class="relative bg-slate-900 rounded-xl overflow-hidden border border-slate-700 aspect-video flex items-center justify-center">
+                    <div id="reader" class="w-full h-full"></div>
+                    <div id="scannerOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 p-4 text-center">
+                        <i class="fa-solid fa-barcode text-4xl text-slate-500 mb-2"></i>
+                        <p class="text-sm text-slate-300 font-medium">I-click para buksan ang Back Camera</p>
+                        <button onclick="startScanner()" class="mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg shadow-lg transition">
+                            <i class="fa-solid fa-power-off mr-1.5"></i> Open Back Camera
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <button onclick="stopScanner()" id="stopBtn" class="hidden text-rose-400 hover:text-rose-300 font-medium">
+                        <i class="fa-solid fa-stop text-xs"></i> Stop Camera
+                    </button>
+                    <span>Manual Input Below</span>
+                </div>
+
+                <!-- Manual Code Input -->
+                <div class="flex gap-2">
+                    <input type="text" id="manualSkuInput" placeholder="Enter or Paste SKU (e.g., SKU-LTH-01)" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:border-indigo-500 focus:outline-none">
+                    <button onclick="submitManualScan()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition">
+                        Submit
+                    </button>
+                </div>
+            </div>
+
+            <!-- Last Scanned Banner & Transaction History -->
+            <div class="lg:col-span-6 space-y-6">
+                
+                <div id="lastScanCard" class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs uppercase tracking-wider font-semibold text-slate-400">Pinakabagong Scan</span>
+                        <span id="lastScanTime" class="text-xs font-mono text-slate-500">--:--:--</span>
+                    </div>
+
+                    <div id="lastScanContent" class="p-4 bg-slate-900/60 rounded-xl border border-slate-700 flex items-center space-x-4">
+                        <div id="lastScanIcon" class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-xl text-slate-500">
+                            <i class="fa-solid fa-box-archive"></i>
+                        </div>
+                        <div>
+                            <div id="lastScanTitle" class="font-bold text-slate-200 text-base">Wala pang na-i-scan</div>
+                            <div id="lastScanSub" class="text-xs text-slate-400">I-scan ang QR Code ng produkto para ma-update ang stock.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity Log -->
+                <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-amber-400"></i> Recent Scan Log
+                        </h3>
+                        <button onclick="exportLogsToCSV()" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium">
+                            <i class="fa-solid fa-file-csv"></i> Download Log
+                        </button>
+                    </div>
+
+                    <div class="overflow-y-auto max-h-56 pr-1 space-y-2" id="logsContainer">
+                        <div class="text-xs text-slate-500 text-center py-6">Walang history ng scan.</div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Inventory Master Table -->
+        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
+            
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-boxes-stacked text-indigo-400"></i> Inventory Master Sheet
+                    </h2>
+                    <p class="text-xs text-slate-400">Awtomatikong nina-navigate at ina-update ang datos sa tuwing nag-scan ng QR Code.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-slate-500"></i>
+                        <input type="text" id="searchInput" onkeyup="renderInventoryTable()" placeholder="Search product or SKU..." class="pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-indigo-500 w-48">
+                    </div>
+                    <button onclick="exportInventoryToCSV()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg transition border border-slate-600">
+                        <i class="fa-solid fa-download"></i> Export Inventory CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto rounded-xl border border-slate-700">
+                <table class="w-full text-left text-xs text-slate-300">
+                    <thead class="bg-slate-900 text-slate-400 uppercase font-mono border-b border-slate-700">
+                        <tr>
+                            <th class="px-4 py-3">SKU</th>
+                            <th class="px-4 py-3">Product Name</th>
+                            <th class="px-4 py-3">Category</th>
+                            <th class="px-4 py-3 text-center">Stock Quantity</th>
+                            <th class="px-4 py-3 text-right">Cost (₱)</th>
+                            <th class="px-4 py-3 text-right">Price (₱)</th>
+                            <th class="px-4 py-3 text-center">Status</th>
+                            <th class="px-4 py-3 text-center">Quick Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventoryTableBody" class="divide-y divide-slate-700/60 bg-slate-800/80">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Modal: QR Code Print & Preview -->
+    <div id="qrModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-2xl border border-slate-700 max-w-sm w-full p-6 text-center space-y-4 relative shadow-2xl">
+            <button onclick="closeQrModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <h3 id="qrModalTitle" class="text-base font-bold text-slate-100">Product QR Code</h3>
+            <div class="p-4 bg-white rounded-xl inline-block shadow-inner mx-auto" id="qrcodeContainer"></div>
+            <p id="qrModalSub" class="text-xs font-mono text-indigo-400 font-semibold">SKU-000</p>
+            
+            <button onclick="window.print()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-lg transition">
+                <i class="fa-solid fa-print"></i> Print Label
+            </button>
+        </div>
     </div>
-    <span class="text-xs bg-amber-500/10 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/20 font-medium">Souvenir Retail</span>
-  </header>
 
-  <!-- Navigation Tabs -->
-  <nav class="bg-slate-800/80 backdrop-blur border-b border-slate-700/50 px-4 py-2 flex space-x-2">
-    <button onclick="switchTab('scanner')" id="tab-scanner" class="flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 bg-amber-600 text-white shadow">
-      <i data-lucide="qr-code" class="w-4 h-4"></i>
-      <span>Scanner</span>
-    </button>
-    <button onclick="switchTab('inventory')" id="tab-inventory" class="flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 bg-slate-700 text-slate-300 hover:bg-slate-600">
-      <i data-lucide="package" class="w-4 h-4"></i>
-      <span>Products (<span id="total-items-count">10</span>)</span>
-    </button>
-    <button onclick="switchTab('overview')" id="tab-overview" class="flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 bg-slate-700 text-slate-300 hover:bg-slate-600">
-      <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
-      <span>Quick Overview</span>
-    </button>
-  </nav>
+    <!-- Modal: Google Sheets Webhook Settings -->
+    <div id="configModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-2xl border border-slate-700 max-w-2xl w-full p-6 space-y-4 relative shadow-2xl">
+            <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
 
-  <!-- Main Content Area -->
-  <main class="flex-1 p-4 max-w-lg mx-auto w-full">
+            <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <i class="fa-brands fa-google-drive text-emerald-400"></i> Connect Google Sheets Live Sync
+            </h3>
 
-    <!-- 1. SCANNER TAB -->
-    <section id="view-scanner" class="space-y-4">
-      
-      <!-- Camera Selection Dropdown -->
-      <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
-        <label class="block text-xs font-medium text-slate-400 mb-1 flex items-center space-x-1">
-          <i data-lucide="camera" class="w-3.5 h-3.5 text-amber-400"></i>
-          <span>Active Camera Source</span>
-        </label>
-        <select id="camera-select" onchange="changeCamera(this.value)" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 w-full focus:outline-none focus:border-amber-500">
-          <option value="">Detecting Back Camera...</option>
-        </select>
-      </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+                Para awtomatikong mag-update ang iyong online Google Sheet pagkascan ng QR Code, i-deploy ang Apps Script code at i-paste ang Webhook URL sa ibaba:
+            </p>
 
-      <!-- Camera Viewer -->
-      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-3 text-center">
-        <div id="reader" class="w-full bg-slate-950 rounded-lg overflow-hidden border border-slate-700 min-h-[220px]"></div>
-        <p class="text-xs text-slate-400">Point back camera at souvenir QR Code label</p>
-      </div>
+            <div class="space-y-1">
+                <label class="text-xs font-semibold text-slate-300">Google Apps Script Webhook URL:</label>
+                <input type="url" id="webhookUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-emerald-300 focus:outline-none focus:border-indigo-500">
+            </div>
 
-      <!-- Feedback Banner -->
-      <div id="scan-feedback" class="bg-slate-800/80 border border-slate-700 p-4 rounded-xl text-center hidden">
-        <div id="feedback-icon" class="mb-1 flex justify-center"></div>
-        <h3 id="feedback-title" class="font-bold text-sm text-white"></h3>
-        <p id="feedback-body" class="text-xs text-slate-400 mt-0.5"></p>
-      </div>
-    </section>
-
-    <!-- 2. INVENTORY TAB -->
-    <section id="view-inventory" class="space-y-3 hidden">
-      <div class="flex items-center justify-between bg-slate-800 p-3 rounded-xl border border-slate-700">
-        <input type="text" id="search-input" oninput="renderInventory()" placeholder="Search souvenir product or SKU..." class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 w-full focus:outline-none focus:border-amber-500">
-      </div>
-      <div id="inventory-list" class="space-y-2"></div>
-    </section>
-
-    <!-- 3. QUICK OVERVIEW TAB -->
-    <section id="view-overview" class="space-y-4 hidden">
-      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-3">
-        <h2 class="text-xs font-bold text-amber-400 tracking-wider uppercase flex items-center space-x-1.5">
-          <i data-lucide="calculator" class="w-4 h-4"></i>
-          <span>Souvenir Pricing & Profitability Calculator</span>
-        </h2>
-        
-        <div>
-          <label class="block text-xs text-slate-400 mb-1">Select Souvenir Product</label>
-          <select id="overview-select" onchange="calculateOverview()" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 w-full focus:outline-none focus:border-amber-500"></select>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeConfigModal()" class="px-4 py-2 bg-slate-700 text-slate-300 text-xs font-medium rounded-lg">Cancel</button>
+                <button onclick="saveWebhookConfig()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow">Save Connection</button>
+            </div>
         </div>
+    </div>
 
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <div class="bg-slate-900 p-3 rounded-lg border border-slate-700">
-            <span class="text-slate-400 block mb-0.5">Base Unit Cost</span>
-            <span id="ov-cost" class="font-bold text-slate-100 text-sm">₱10.00</span>
-          </div>
-          <div class="bg-slate-900 p-3 rounded-lg border border-slate-700">
-            <span class="text-slate-400 block mb-0.5">Target Selling Price</span>
-            <span id="ov-price" class="font-bold text-emerald-400 text-sm">₱12.00</span>
-          </div>
-        </div>
+    <!-- Application JavaScript Code -->
+    <script>
+        const defaultInventory = [
+            { sku: "SKU-LTH-01", name: "Leathers", category: "Leather Goods", qty: 25, cost: 10, price: 12, threshold: 10 },
+            { sku: "SKU-PRF-02", name: "Perfumes", category: "Fragrance", qty: 40, cost: 10, price: 12, threshold: 15 },
+            { sku: "SKU-CND-03", name: "Candle", category: "Home Fragrance", qty: 15, cost: 10, price: 12, threshold: 5 },
+            { sku: "SKU-LNK-04", name: "Lace & Luck", category: "Accessories", qty: 50, cost: 10, price: 12, threshold: 15 },
+            { sku: "SKU-DFS-05", name: "Diffuser", category: "Home Fragrance", qty: 18, cost: 10, price: 12, threshold: 5 },
+            { sku: "SKU-TOT-06", name: "Tote Bag", category: "Bags & Accessories", qty: 30, cost: 10, price: 12, threshold: 10 },
+            { sku: "SKU-SOP-07", name: "Soap / Hand Soap", category: "Personal Care", qty: 60, cost: 10, price: 12, threshold: 20 },
+            { sku: "SKU-CFE-08", name: "Coffee / Fusion", category: "Souvenir Pack", qty: 45, cost: 100, price: 12, threshold: 15 },
+            { sku: "SKU-GNP-09", name: "Gentle Pump", category: "Packaging & Dispenser", qty: 80, cost: 10, price: 12, threshold: 20 },
+            { sku: "SKU-LSL-10", name: "Live Stamping Leather", category: "Custom Stamping Service", qty: 12, cost: 10, price: 12, threshold: 5 }
+        ];
 
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <div class="bg-slate-900 p-3 rounded-lg border border-slate-700">
-            <span class="text-slate-400 block mb-0.5">Markup Rate</span>
-            <span id="ov-markup" class="font-bold text-amber-400 text-sm">20.00%</span>
-          </div>
-          <div class="bg-slate-900 p-3 rounded-lg border border-slate-700">
-            <span class="text-slate-400 block mb-0.5">Profit per Piece</span>
-            <span id="ov-profit" class="font-bold text-emerald-400 text-sm">₱2.00</span>
-          </div>
-        </div>
+        let inventory = [];
+        let logs = [];
+        let currentMode = "IN";
+        let html5QrCode = null;
+        let webhookUrl = "";
 
-        <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/80 text-xs space-y-1">
-          <div class="flex justify-between text-slate-400">
-            <span>Bulk Discount Price (10% Off):</span>
-            <span id="ov-discount" class="font-bold text-slate-200">₱10.80</span>
-          </div>
-          <div class="flex justify-between text-slate-400">
-            <span>Profit Margin:</span>
-            <span id="ov-margin" class="font-bold text-slate-200">16.67%</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <script>
-    // PASTE YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL HERE
-    const GOOGLE_SHEET_API_URL = "YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL";
-
-    const souvenirProducts = [
-      { sku: "SKU-LTH-01", name: "Leathers", category: "Leather Goods", price: 10.0, unit: "pc", qty: 25 },
-      { sku: "SKU-PRF-02", name: "Perfumes", category: "Fragrance", price: 10.0, unit: "pc", qty: 40 },
-      { sku: "SKU-CND-03", name: "Candle", category: "Home Fragrance", price: 10.0, unit: "pc", qty: 15 },
-      { sku: "SKU-LNK-04", name: "Lace & Luck", category: "Accessories", price: 10.0, unit: "pc", qty: 50 },
-      { sku: "SKU-DFS-05", name: "Diffuser", category: "Home Fragrance", price: 10.0, unit: "pc", qty: 18 },
-      { sku: "SKU-TOT-06", name: "Tote Bag", category: "Bags & Accessories", price: 10.0, unit: "pc", qty: 30 },
-      { sku: "SKU-SOP-07", name: "Soap / Hand Soap", category: "Personal Care", price: 10.0, unit: "pc", qty: 60 },
-      { sku: "SKU-CFE-08", name: "Coffee / Fusion", category: "Souvenir Pack", price: 10.0, unit: "pc", qty: 45 },
-      { sku: "SKU-GNP-09", name: "Gentle Pump", category: "Packaging & Dispenser", price: 10.0, unit: "pc", qty: 80 },
-      { sku: "SKU-LSL-10", name: "Live Stamping Leather", category: "Custom Stamping Service", price: 10.0, unit: "pc", qty: 12 }
-    ];
-
-    let products = JSON.parse(localStorage.getItem('memorabbylia_products')) || souvenirProducts;
-    let isScanningCooldown = false;
-    let html5QrCodeInstance = null;
-
-    function saveState() {
-      localStorage.setItem('memorabbylia_products', JSON.stringify(products));
-    }
-
-    function switchTab(tab) {
-      ['scanner', 'inventory', 'overview'].forEach(t => {
-        document.getElementById(`view-${t}`).classList.add('hidden');
-        const btn = document.getElementById(`tab-${t}`);
-        btn.className = "flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 bg-slate-700 text-slate-300 hover:bg-slate-600";
-      });
-
-      document.getElementById(`view-${tab}`).classList.remove('hidden');
-      const activeBtn = document.getElementById(`tab-${tab}`);
-      activeBtn.className = "flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 bg-amber-600 text-white shadow";
-
-      if (tab === 'inventory') renderInventory();
-      if (tab === 'overview') initOverview();
-    }
-
-    function handleScanSuccess(decodedText) {
-      if (isScanningCooldown) return;
-      isScanningCooldown = true;
-
-      const code = decodedText.trim().toUpperCase();
-      const product = products.find(p => p.sku.toUpperCase() === code || p.name.toUpperCase() === code);
-
-      const feedbackBox = document.getElementById('scan-feedback');
-      const iconBox = document.getElementById('feedback-icon');
-      const titleBox = document.getElementById('feedback-title');
-      const bodyBox = document.getElementById('feedback-body');
-
-      if (product) {
-        let inputQty = prompt(`Scanned: ${product.name}\nCurrent Stock: ${product.qty} ${product.unit}s\n\nEnter NEW total stock quantity:`, product.qty);
-        
-        if (inputQty !== null && !isNaN(inputQty) && inputQty.trim() !== "") {
-          let newQty = parseInt(inputQty.trim(), 10);
-          product.qty = newQty;
-
-          if (GOOGLE_SHEET_API_URL && !GOOGLE_SHEET_API_URL.includes("YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL")) {
-            fetch(GOOGLE_SHEET_API_URL, {
-              method: "POST",
-              mode: "no-cors",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ sku: product.sku, explicitQty: newQty })
-            }).catch(err => console.error("Sheet sync error:", err));
-          }
-
-          saveState();
-
-          feedbackBox.classList.remove('hidden');
-          iconBox.innerHTML = `<i data-lucide="check-circle-2" class="w-8 h-8 text-emerald-400"></i>`;
-          titleBox.innerText = `Updated ${product.name}`;
-          titleBox.className = "font-bold text-sm text-emerald-400";
-          bodyBox.innerText = `Set total stock quantity to ${newQty} ${product.unit}s (Synced to Google Sheet)`;
+        function playBeep(type = "success") {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                osc.type = "sine";
+                osc.frequency.value = type === "success" ? (currentMode === "IN" ? 880 : 587) : 220;
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
+            } catch (e) {
+                console.log("Audio not supported or blocked");
+            }
         }
-      } else {
-        feedbackBox.classList.remove('hidden');
-        iconBox.innerHTML = `<i data-lucide="alert-triangle" class="w-8 h-8 text-rose-400"></i>`;
-        titleBox.innerText = "SKU Not Recognized";
-        titleBox.className = "font-bold text-sm text-rose-400";
-        bodyBox.innerText = `Scanned label "${decodedText}" is not in souvenir catalog.`;
-      }
 
-      lucide.createIcons();
-      setTimeout(() => { isScanningCooldown = false; }, 2000);
-    }
+        window.addEventListener("DOMContentLoaded", () => {
+            loadSavedData();
+            renderInventoryTable();
+            renderLogs();
+            updateModeUI();
+        });
 
-    function renderInventory() {
-      const query = document.getElementById('search-input').value.toLowerCase();
-      const list = document.getElementById('inventory-list');
-      document.getElementById('total-items-count').innerText = products.length;
+        function loadSavedData() {
+            const savedInv = localStorage.getItem("memorabbylia_inventory");
+            inventory = savedInv ? JSON.parse(savedInv) : [...defaultInventory];
 
-      const filtered = products.filter(p => p.name.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query));
+            const savedLogs = localStorage.getItem("memorabbylia_logs");
+            logs = savedLogs ? JSON.parse(savedLogs) : [];
 
-      if (filtered.length === 0) {
-        list.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">No souvenir items matching "${query}"</div>`;
-        return;
-      }
-
-      list.innerHTML = filtered.map(p => `
-        <div class="bg-slate-800 p-3 rounded-xl border border-slate-700 flex items-center justify-between">
-          <div>
-            <div class="font-bold text-sm text-white">${p.name}</div>
-            <div class="text-xs text-slate-400 font-mono">${p.sku} • <span class="text-amber-400 font-semibold">₱${p.price.toFixed(2)} / ${p.unit}</span></div>
-          </div>
-          <div class="text-right">
-            <span class="text-sm font-bold ${p.qty < 20 ? 'text-amber-400' : 'text-emerald-400'}">${p.qty}</span>
-            <span class="text-xs text-slate-400 block">${p.unit}s</span>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function initOverview() {
-      const select = document.getElementById('overview-select');
-      select.innerHTML = products.map((p, idx) => `<option value="${idx}">${p.name} (${p.category})</option>`).join('');
-      calculateOverview();
-    }
-
-    function calculateOverview() {
-      const idx = document.getElementById('overview-select').value;
-      const p = products[idx] || products[0];
-
-      const cost = p.price;
-      const markup = 0.20;
-      const sellingPrice = cost * (1 + markup);
-      const profit = sellingPrice - cost;
-      const discountPrice = sellingPrice * 0.90;
-      const profitMargin = (profit / sellingPrice) * 100;
-
-      document.getElementById('ov-cost').innerText = `₱${cost.toFixed(2)}`;
-      document.getElementById('ov-price').innerText = `₱${sellingPrice.toFixed(2)}`;
-      document.getElementById('ov-markup').innerText = `20.00%`;
-      document.getElementById('ov-profit').innerText = `₱${profit.toFixed(2)}`;
-      document.getElementById('ov-discount').innerText = `₱${discountPrice.toFixed(2)}`;
-      document.getElementById('ov-margin').innerText = `${profitMargin.toFixed(2)}%`;
-    }
-
-    async function startCamera(cameraId) {
-      if (html5QrCodeInstance) {
-        try {
-          await html5QrCodeInstance.stop();
-        } catch(e) {}
-      }
-
-      html5QrCodeInstance = new Html5Qrcode("reader");
-      const config = { fps: 10, qrbox: { width: 200, height: 200 } };
-
-      const cameraConstraint = cameraId ? cameraId : { facingMode: "environment" };
-
-      html5QrCodeInstance.start(
-        cameraConstraint,
-        config,
-        handleScanSuccess
-      ).catch(err => console.error("Camera start error:", err));
-    }
-
-    async function changeCamera(cameraId) {
-      if (cameraId) {
-        await startCamera(cameraId);
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', async () => {
-      lucide.createIcons();
-      renderInventory();
-
-      try {
-        const devices = await Html5Qrcode.getCameras();
-        const cameraSelect = document.getElementById('camera-select');
-
-        if (devices && devices.length > 0) {
-          cameraSelect.innerHTML = devices.map(d => {
-            const isBack = d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('rear') || d.label.toLowerCase().includes('environment');
-            return `<option value="${d.id}" ${isBack ? 'selected' : ''}>${d.label || 'Camera ' + d.id}</option>`;
-          }).join('');
-
-          // Identify back camera or fall back to environmental facing mode
-          const backCam = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('rear') || d.label.toLowerCase().includes('environment'));
-          const selectedCamId = backCam ? backCam.id : devices[devices.length - 1].id;
-          
-          await startCamera(selectedCamId);
-        } else {
-          await startCamera(null);
+            webhookUrl = localStorage.getItem("memorabbylia_webhook") || "";
+            document.getElementById("webhookUrlInput").value = webhookUrl;
         }
-      } catch (e) {
-        await startCamera(null);
-      }
-    });
-  </script>
+
+        function saveData() {
+            localStorage.setItem("memorabbylia_inventory", JSON.stringify(inventory));
+            localStorage.setItem("memorabbylia_logs", JSON.stringify(logs));
+        }
+
+        function setScanMode(mode) {
+            currentMode = mode;
+            updateModeUI();
+        }
+
+        function updateModeUI() {
+            const inBtn = document.getElementById("modeInBtn");
+            const outBtn = document.getElementById("modeOutBtn");
+
+            if (currentMode === "IN") {
+                inBtn.className = "py-2.5 px-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition bg-emerald-600 text-white shadow";
+                outBtn.className = "py-2.5 px-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition bg-slate-800 text-slate-400 hover:text-slate-200";
+            } else {
+                outBtn.className = "py-2.5 px-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition bg-rose-600 text-white shadow";
+                inBtn.className = "py-2.5 px-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition bg-slate-800 text-slate-400 hover:text-slate-200";
+            }
+        }
+
+        function adjustScanQty(delta) {
+            const input = document.getElementById("scanQtyInput");
+            let val = parseInt(input.value) || 1;
+            val = Math.max(1, val + delta);
+            input.value = val;
+        }
+
+        function startScanner() {
+            document.getElementById("scannerOverlay").classList.add("hidden");
+            document.getElementById("stopBtn").classList.remove("hidden");
+            document.getElementById("scanStatusBadge").textContent = "Scanning...";
+            document.getElementById("scanStatusBadge").className = "px-2.5 py-1 text-xs rounded-full bg-indigo-900/80 text-indigo-300 border border-indigo-700 animate-pulse font-medium";
+
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                onScanSuccess,
+                onScanError
+            ).catch(err => {
+                alert("Camera permission denied or camera not available.");
+                stopScanner();
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById("scannerOverlay").classList.remove("hidden");
+                    document.getElementById("stopBtn").classList.add("hidden");
+                    document.getElementById("scanStatusBadge").textContent = "Ready";
+                    document.getElementById("scanStatusBadge").className = "px-2.5 py-1 text-xs rounded-full bg-slate-700 text-slate-300 font-medium";
+                }).catch(err => console.error(err));
+            } else {
+                document.getElementById("scannerOverlay").classList.remove("hidden");
+                document.getElementById("stopBtn").classList.add("hidden");
+            }
+        }
+
+        let isProcessingScan = false;
+        function onScanSuccess(decodedText) {
+            if (isProcessingScan) return;
+            isProcessingScan = true;
+
+            processScanCode(decodedText.trim());
+
+            setTimeout(() => { isProcessingScan = false; }, 1500);
+        }
+
+        function onScanError(error) {}
+
+        function submitManualScan() {
+            const input = document.getElementById("manualSkuInput");
+            if (input.value.trim()) {
+                processScanCode(input.value.trim());
+                input.value = "";
+            }
+        }
+
+        function processScanCode(code) {
+            const qtyChange = parseInt(document.getElementById("scanQtyInput").value) || 1;
+            const item = inventory.find(i => i.sku.toUpperCase() === code.toUpperCase() || i.name.toLowerCase() === code.toLowerCase());
+
+            if (!item) {
+                playBeep("error");
+                updateLastScanUI(false, `Hindi mahanap ang SKU: ${code}`, "Pakisuri kung tama ang SKU code.");
+                return;
+            }
+
+            if (currentMode === "IN") {
+                item.qty += qtyChange;
+            } else {
+                if (item.qty < qtyChange) {
+                    playBeep("error");
+                    alert(`Kulang ang stock! Kasalukuyang stock ng ${item.name} ay ${item.qty} lamang.`);
+                    return;
+                }
+                item.qty -= qtyChange;
+            }
+
+            saveData();
+            playBeep("success");
+
+            const actionText = currentMode === "IN" ? `+${qtyChange} Dagdag Stock` : `-${qtyChange} Bawas Stock`;
+            
+            logs.unshift({
+                timestamp: new Date().toLocaleString(),
+                sku: item.sku,
+                name: item.name,
+                action: currentMode,
+                qtyChange: qtyChange,
+                newQty: item.qty
+            });
+            if (logs.length > 50) logs.pop();
+            saveData();
+
+            updateLastScanUI(true, `${item.name} (${item.sku})`, `${actionText} | Bagong Stock: ${item.qty} units`, currentMode);
+            renderInventoryTable();
+            renderLogs();
+
+            syncToGoogleSheets(item.sku, item.qty, currentMode, qtyChange);
+        }
+
+        function updateLastScanUI(success, title, sub, mode = "IN") {
+            document.getElementById("lastScanTime").textContent = new Date().toLocaleTimeString();
+            document.getElementById("lastScanTitle").textContent = title;
+            document.getElementById("lastScanSub").textContent = sub;
+
+            const iconDiv = document.getElementById("lastScanIcon");
+            if (!success) {
+                iconDiv.className = "w-12 h-12 rounded-xl bg-rose-900/50 text-rose-400 flex items-center justify-center text-xl border border-rose-700";
+                iconDiv.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i>`;
+            } else if (mode === "IN") {
+                iconDiv.className = "w-12 h-12 rounded-xl bg-emerald-900/50 text-emerald-400 flex items-center justify-center text-xl border border-emerald-700";
+                iconDiv.innerHTML = `<i class="fa-solid fa-arrow-down-left-and-arrow-up-right-to-center"></i>`;
+            } else {
+                iconDiv.className = "w-12 h-12 rounded-xl bg-amber-900/50 text-amber-400 flex items-center justify-center text-xl border border-amber-700";
+                iconDiv.innerHTML = `<i class="fa-solid fa-boxes-packing"></i>`;
+            }
+        }
+
+        function renderInventoryTable() {
+            const tbody = document.getElementById("inventoryTableBody");
+            const search = document.getElementById("searchInput").value.toLowerCase();
+            tbody.innerHTML = "";
+
+            const filtered = inventory.filter(i => 
+                i.sku.toLowerCase().includes(search) || 
+                i.name.toLowerCase().includes(search) ||
+                i.category.toLowerCase().includes(search)
+            );
+
+            filtered.forEach(item => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-700/40 transition";
+
+                const isLow = item.qty <= item.threshold;
+                const statusBadge = isLow 
+                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">Low Stock (${item.threshold})</span>`
+                    : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Sapat (OK)</span>`;
+
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-mono font-bold text-indigo-300">${item.sku}</td>
+                    <td class="px-4 py-3 font-semibold text-slate-100">${item.name}</td>
+                    <td class="px-4 py-3 text-slate-400">${item.category}</td>
+                    <td class="px-4 py-3 text-center font-mono font-bold text-base ${isLow ? 'text-amber-400' : 'text-emerald-400'}">${item.qty}</td>
+                    <td class="px-4 py-3 text-right font-mono">₱${item.cost.toFixed(2)}</td>
+                    <td class="px-4 py-3 text-right font-mono">₱${item.price.toFixed(2)}</td>
+                    <td class="px-4 py-3 text-center">${statusBadge}</td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex items-center justify-center space-x-1">
+                            <button onclick="quickAdjust('${item.sku}', 1)" class="p-1 px-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold" title="Dagdag 1">+</button>
+                            <button onclick="quickAdjust('${item.sku}', -1)" class="p-1 px-2 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs font-bold" title="Bawas 1">-</button>
+                            <button onclick="showQrModal('${item.sku}', '${item.name}')" class="p-1 px-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded text-xs" title="View QR"><i class="fa-solid fa-qrcode"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function quickAdjust(sku, delta) {
+            const item = inventory.find(i => i.sku === sku);
+            if (!item) return;
+            if (delta < 0 && item.qty < Math.abs(delta)) {
+                alert("Hindi maaaring maging negative ang stock.");
+                return;
+            }
+            item.qty += delta;
+            saveData();
+            renderInventoryTable();
+            syncToGoogleSheets(item.sku, item.qty, delta > 0 ? "IN" : "OUT", Math.abs(delta));
+        }
+
+        function renderLogs() {
+            const container = document.getElementById("logsContainer");
+            if (logs.length === 0) {
+                container.innerHTML = `<div class="text-xs text-slate-500 text-center py-6">Walang history ng scan.</div>`;
+                return;
+            }
+
+            container.innerHTML = logs.map(l => `
+                <div class="flex items-center justify-between p-2.5 bg-slate-900/70 rounded-xl border border-slate-700/80 text-xs">
+                    <div>
+                        <span class="font-mono text-indigo-300 font-bold">${l.sku}</span> - <span class="text-slate-200 font-medium">${l.name}</span>
+                        <div class="text-[10px] text-slate-500">${l.timestamp}</div>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-bold ${l.action === 'IN' ? 'text-emerald-400' : 'text-rose-400'}">
+                            ${l.action === 'IN' ? '+' : '-'}${l.qtyChange}
+                        </span>
+                        <div class="text-[10px] text-slate-400">Bal: ${l.newQty}</div>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        function showQrModal(sku, name) {
+            document.getElementById("qrModalTitle").textContent = name;
+            document.getElementById("qrModalSub").textContent = sku;
+            const container = document.getElementById("qrcodeContainer");
+            container.innerHTML = "";
+            new QRCode(container, {
+                text: sku,
+                width: 160,
+                height: 160
+            });
+            document.getElementById("qrModal").classList.remove("hidden");
+        }
+
+        function closeQrModal() {
+            document.getElementById("qrModal").classList.add("hidden");
+        }
+
+        function openConfigModal() {
+            document.getElementById("configModal").classList.remove("hidden");
+        }
+
+        function closeConfigModal() {
+            document.getElementById("configModal").classList.add("hidden");
+        }
+
+        function saveWebhookConfig() {
+            webhookUrl = document.getElementById("webhookUrlInput").value.trim();
+            localStorage.setItem("memorabbylia_webhook", webhookUrl);
+            alert("Google Sheets Webhook URL saved successfully!");
+            closeConfigModal();
+        }
+
+        function syncToGoogleSheets(sku, newQty, action, qtyChange) {
+            if (!webhookUrl) return;
+
+            fetch(webhookUrl, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    sku: sku,
+                    newQty: newQty,
+                    action: action,
+                    qtyChange: qtyChange,
+                    timestamp: new Date().toISOString()
+                })
+            }).then(() => console.log("Synced with Google Sheets"))
+              .catch(err => console.error("Sheets sync error:", err));
+        }
+
+        function exportInventoryToCSV() {
+            let csv = "Product ID (SKU),Product Name,Category,Quantity in Stock,Cost per Unit (PHP),Sale Price per Unit (PHP)\n";
+            inventory.forEach(i => {
+                csv += `"${i.sku}","${i.name}","${i.category}",${i.qty},${i.cost},${i.price}\n`;
+            });
+            downloadCSV(csv, "MemorABBYlia_Inventory_Updated.csv");
+        }
+
+        function exportLogsToCSV() {
+            let csv = "Timestamp,SKU,Product Name,Action,Qty Change,New Balance\n";
+            logs.forEach(l => {
+                csv += `"${l.timestamp}","${l.sku}","${l.name}","${l.action}",${l.qtyChange},${l.newQty}\n`;
+            });
+            downloadCSV(csv, "MemorABBYlia_Scan_Logs.csv");
+        }
+
+        function downloadCSV(csvContent, filename) {
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+        function resetDataPrompt() {
+            if (confirm("Sigurado ka bang gusto mong i-reset ang inventory sa orihinal na data mula sa CSV?")) {
+                localStorage.removeItem("memorabbylia_inventory");
+                localStorage.removeItem("memorabbylia_logs");
+                loadSavedData();
+                renderInventoryTable();
+                renderLogs();
+            }
+        }
+    </script>
 </body>
 </html>
