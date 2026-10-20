@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MemorABBYlia Souvenir Shop Inventory</title>
+  <!-- HTML5 QR Code Library -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    #reader video { object-fit: cover; border-radius: 0.75rem; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans pb-20">
+
+  <!-- Header -->
+  <header class="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-50 flex items-center justify-between">
+    <div class="flex items-center space-x-2">
+      <i data-lucide="gift" class="w-6 h-6 text-amber-400"></i>
+      <h1 class="font-bold text-lg text-white">MemorABBYlia Souvenirs</h1>
+    </div>
+    <span class="text-xs bg-amber-500/10 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/20 font-medium">Souvenir Retail</span>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="bg-slate-800/80 backdrop-blur border-b border-slate-700/50 px-4 py-2 flex space-x-2">
+    <button onclick="switchTab('scanner')" id="tab-scanner" class="flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 bg-amber-600 text-white shadow">
+      <i data-lucide="qr-code" class="w-4 h-4"></i>
+      <span>Scanner</span>
+    </button>
+    <button onclick="switchTab('inventory')" id="tab-inventory" class="flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 bg-slate-700 text-slate-300 hover:bg-slate-600">
+      <i data-lucide="package" class="w-4 h-4"></i>
+      <span>Products (<span id="total-items-count">10</span>)</span>
+    </button>
+    <button onclick="switchTab('overview')" id="tab-overview" class="flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 bg-slate-700 text-slate-300 hover:bg-slate-600">
+      <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+      <span>Quick Overview</span>
+    </button>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 p-4 max-w-lg mx-auto w-full">
+
+    <!-- 1. SCANNER TAB -->
+    <section id="view-scanner" class="space-y-4">
+      <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
+        <label class="block text-xs font-medium text-slate-400 mb-2 text-center tracking-wider uppercase">Scan Action</label>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="mode-in" onclick="setScanMode('IN')" class="py-2.5 rounded-lg font-bold text-xs flex items-center justify-center space-x-1.5 transition bg-emerald-600 text-white ring-2 ring-emerald-400">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>STOCK IN (+1)</span>
+          </button>
+          <button id="mode-out" onclick="setScanMode('OUT')" class="py-2.5 rounded-lg font-bold text-xs flex items-center justify-center space-x-1.5 transition bg-slate-700 text-slate-300">
+            <i data-lucide="minus-circle" class="w-4 h-4"></i>
+            <span>STOCK OUT (-1)</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-3 text-center">
+        <div id="reader" class="w-full bg-slate-950 rounded-lg overflow-hidden border border-slate-700 min-h-[220px]"></div>
+        <p class="text-xs text-slate-400">Scan souvenir QR Code label</p>
+      </div>
+
+      <div id="scan-feedback" class="bg-slate-800/80 border border-slate-700 p-4 rounded-xl text-center hidden">
+        <div id="feedback-icon" class="mb-1 flex justify-center"></div>
+        <h3 id="feedback-title" class="font-bold text-sm text-white"></h3>
+        <p id="feedback-body" class="text-xs text-slate-400 mt-0.5"></p>
+      </div>
+    </section>
+
+    <!-- 2. INVENTORY TAB -->
+    <section id="view-inventory" class="space-y-3 hidden">
+      <div class="flex items-center justify-between bg-slate-800 p-3 rounded-xl border border-slate-700">
+        <input type="text" id="search-input" oninput="renderInventory()" placeholder="Search souvenir product or SKU..." class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 w-full focus:outline-none focus:border-amber-500">
+      </div>
+      <div id="inventory-list" class="space-y-2"></div>
+    </section>
+
+    <!-- 3. QUICK OVERVIEW TAB -->
+    <section id="view-overview" class="space-y-4 hidden">
+      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-3">
+        <h2 class="text-xs font-bold text-amber-400 tracking-wider uppercase flex items-center space-x-1.5">
+          <i data-lucide="calculator" class="w-4 h-4"></i>
+          <span>Souvenir Pricing & Profitability Calculator</span>
+        </h2>
+        
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Select Souvenir Product</label>
+          <select id="overview-select" onchange="calculateOverview()" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 w-full focus:outline-none focus:border-amber-500"></select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-slate-900 p-3 rounded-lg border border-slate-700">
+            <span class="text-slate-400 block mb-0.5">Base Unit Cost</span>
+            <span id="ov-cost" class="font-bold text-slate-100 text-sm">₱10.00</span>
+          </div>
+          <div class="bg-slate-900 p-3 rounded-lg border border-slate-700">
+            <span class="text-slate-400 block mb-0.5">Target Selling Price</span>
+            <span id="ov-price" class="font-bold text-emerald-400 text-sm">₱12.00</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-slate-900 p-3 rounded-lg border border-slate-700">
+            <span class="text-slate-400 block mb-0.5">Markup Rate</span>
+            <span id="ov-markup" class="font-bold text-amber-400 text-sm">20.00%</span>
+          </div>
+          <div class="bg-slate-900 p-3 rounded-lg border border-slate-700">
+            <span class="text-slate-400 block mb-0.5">Profit per Piece</span>
+            <span id="ov-profit" class="font-bold text-emerald-400 text-sm">₱2.00</span>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/80 text-xs space-y-1">
+          <div class="flex justify-between text-slate-400">
+            <span>Bulk Discount Price (10% Off):</span>
+            <span id="ov-discount" class="font-bold text-slate-200">₱10.80</span>
+          </div>
+          <div class="flex justify-between text-slate-400">
+            <span>Profit Margin:</span>
+            <span id="ov-margin" class="font-bold text-slate-200">16.67%</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Paste your deployed Google Apps Script Web App URL here
+    const GOOGLE_SHEET_API_URL = "YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL";
+
+    const souvenirProducts = [
+      { sku: "SKU-LTH-01", name: "Leathers", category: "Leather Goods", price: 10.0, unit: "pc", qty: 25 },
+      { sku: "SKU-PRF-02", name: "Perfumes", category: "Fragrance", price: 10.0, unit: "pc", qty: 40 },
+      { sku: "SKU-CND-03", name: "Candle", category: "Home Fragrance", price: 10.0, unit: "pc", qty: 15 },
+      { sku: "SKU-LNK-04", name: "Lace & Luck", category: "Accessories", price: 10.0, unit: "pc", qty: 50 },
+      { sku: "SKU-DFS-05", name: "Diffuser", category: "Home Fragrance", price: 10.0, unit: "pc", qty: 18 },
+      { sku: "SKU-TOT-06", name: "Tote Bag", category: "Bags & Accessories", price: 10.0, unit: "pc", qty: 30 },
+      { sku: "SKU-SOP-07", name: "Soap / Hand Soap", category: "Personal Care", price: 10.0, unit: "pc", qty: 60 },
+      { sku: "SKU-CFE-08", name: "Coffee / Fusion", category: "Souvenir Pack", price: 10.0, unit: "pc", qty: 45 },
+      { sku: "SKU-GNP-09", name: "Gentle Pump", category: "Packaging & Dispenser", price: 10.0, unit: "pc", qty: 80 },
+      { sku: "SKU-LSL-10", name: "Live Stamping Leather", category: "Custom Stamping Service", price: 10.0, unit: "pc", qty: 12 }
+    ];
+
+    let products = JSON.parse(localStorage.getItem('memorabbylia_products')) || souvenirProducts;
+    let activeScanMode = 'IN';
+    let isScanningCooldown = false;
+
+    function saveState() {
+      localStorage.setItem('memorabbylia_products', JSON.stringify(products));
+    }
+
+    function switchTab(tab) {
+      ['scanner', 'inventory', 'overview'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.add('hidden');
+        const btn = document.getElementById(`tab-${t}`);
+        btn.className = "flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 bg-slate-700 text-slate-300 hover:bg-slate-600";
+      });
+
+      document.getElementById(`view-${tab}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tab-${tab}`);
+      activeBtn.className = "flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 bg-amber-600 text-white shadow";
+
+      if (tab === 'inventory') renderInventory();
+      if (tab === 'overview') initOverview();
+    }
+
+    function setScanMode(mode) {
+      activeScanMode = mode;
+      const btnIn = document.getElementById('mode-in');
+      const btnOut = document.getElementById('mode-out');
+
+      if (mode === 'IN') {
+        btnIn.className = "py-2.5 rounded-lg font-bold text-xs flex items-center justify-center space-x-1.5 transition bg-emerald-600 text-white ring-2 ring-emerald-400";
+        btnOut.className = "py-2.5 rounded-lg font-bold text-xs flex items-center justify-center space-x-1.5 transition bg-slate-700 text-slate-300";
+      } else {
+        btnOut.className = "py-2.5 rounded-lg font-bold text-xs flex items-center justify-center space-x-1.5 transition bg-rose-600 text-white ring-2 ring-rose-400";
+        btnIn.className = "py-2.5 rounded-lg font-bold text-xs flex items-center justify-center space-x-1.5 transition bg-slate-700 text-slate-300";
+      }
+    }
+
+    function handleScanSuccess(decodedText) {
+      if (isScanningCooldown) return;
+      isScanningCooldown = true;
+
+      const code = decodedText.trim().toUpperCase();
+      const product = products.find(p => p.sku.toUpperCase() === code || p.name.toUpperCase() === code);
+
+      const feedbackBox = document.getElementById('scan-feedback');
+      const iconBox = document.getElementById('feedback-icon');
+      const titleBox = document.getElementById('feedback-title');
+      const bodyBox = document.getElementById('feedback-body');
+
+      feedbackBox.classList.remove('hidden');
+
+      if (product) {
+        if (GOOGLE_SHEET_API_URL && !GOOGLE_SHEET_API_URL.includes("YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL")) {
+          fetch(GOOGLE_SHEET_API_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sku: product.sku, action: activeScanMode })
+          }).catch(err => console.error("Sheet sync error:", err));
+        }
+
+        if (activeScanMode === 'IN') {
+          product.qty += 1;
+        } else {
+          product.qty = Math.max(0, product.qty - 1);
+        }
+
+        saveState();
+
+        iconBox.innerHTML = `<i data-lucide="check-circle-2" class="w-8 h-8 text-emerald-400"></i>`;
+        titleBox.innerText = `Updated ${product.name}`;
+        titleBox.className = "font-bold text-sm text-emerald-400";
+        bodyBox.innerText = `Action: ${activeScanMode} | Current Stock: ${product.qty} ${product.unit}s`;
+      } else {
+        iconBox.innerHTML = `<i data-lucide="alert-triangle" class="w-8 h-8 text-rose-400"></i>`;
+        titleBox.innerText = "SKU Not Recognized";
+        titleBox.className = "font-bold text-sm text-rose-400";
+        bodyBox.innerText = `Scanned label "${decodedText}" is not in souvenir catalog.`;
+      }
+
+      lucide.createIcons();
+      setTimeout(() => { isScanningCooldown = false; }, 2000);
+    }
+
+    function renderInventory() {
+      const query = document.getElementById('search-input').value.toLowerCase();
+      const list = document.getElementById('inventory-list');
+      document.getElementById('total-items-count').innerText = products.length;
+
+      const filtered = products.filter(p => p.name.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query));
+
+      if (filtered.length === 0) {
+        list.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">No souvenir items matching "${query}"</div>`;
+        return;
+      }
+
+      list.innerHTML = filtered.map(p => `
+        <div class="bg-slate-800 p-3 rounded-xl border border-slate-700 flex items-center justify-between">
+          <div>
+            <div class="font-bold text-sm text-white">${p.name}</div>
+            <div class="text-xs text-slate-400 font-mono">${p.sku} • <span class="text-amber-400 font-semibold">₱${p.price.toFixed(2)} / ${p.unit}</span></div>
+          </div>
+          <div class="text-right">
+            <span class="text-sm font-bold ${p.qty < 20 ? 'text-amber-400' : 'text-emerald-400'}">${p.qty}</span>
+            <span class="text-xs text-slate-400 block">${p.unit}s</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function initOverview() {
+      const select = document.getElementById('overview-select');
+      select.innerHTML = products.map((p, idx) => `<option value="${idx}">${p.name} (${p.category})</option>`).join('');
+      calculateOverview();
+    }
+
+    function calculateOverview() {
+      const idx = document.getElementById('overview-select').value;
+      const p = products[idx] || products[0];
+
+      const cost = p.price;
+      const markup = 0.20;
+      const sellingPrice = cost * (1 + markup);
+      const profit = sellingPrice - cost;
+      const discountPrice = sellingPrice * 0.90;
+      const profitMargin = (profit / sellingPrice) * 100;
+
+      document.getElementById('ov-cost').innerText = `₱${cost.toFixed(2)}`;
+      document.getElementById('ov-price').innerText = `₱${sellingPrice.toFixed(2)}`;
+      document.getElementById('ov-markup').innerText = `20.00%`;
+      document.getElementById('ov-profit').innerText = `₱${profit.toFixed(2)}`;
+      document.getElementById('ov-discount').innerText = `₱${discountPrice.toFixed(2)}`;
+      document.getElementById('ov-margin').innerText = `${profitMargin.toFixed(2)}%`;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      renderInventory();
+
+      const html5QrCode = new Html5QrcodeScanner("reader", {
+        fps: 10,
+        qrbox: { width: 200, height: 200 },
+        rememberLastUsedCamera: true
+      });
+
+      html5QrCode.render(handleScanSuccess);
+    });
+  </script>
+</body>
+</html>
