@@ -37,7 +37,7 @@
                     <i class="fa-solid fa-link text-emerald-400"></i> Google Sheets Webhook
                 </button>
                 <button onclick="resetDataPrompt()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg border border-slate-600 transition">
-                    <i class="fa-solid fa-rotate"></i> Reset
+                    <i class="fa-solid fa-rotate"></i> Refresh / Reset
                 </button>
             </div>
         </div>
@@ -45,7 +45,7 @@
 
     <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
-        <!-- Top Section: Scanner & Controls -->
+        <!-- Top Section: Scanner & Quick Controls -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
             <!-- Square QR Camera Scanner Panel (Left) -->
@@ -85,8 +85,8 @@
                     <div id="reader" class="w-full h-full"></div>
                     <div id="scannerOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 p-4 text-center z-10">
                         <i class="fa-solid fa-qrcode text-5xl text-indigo-400 mb-3 animate-pulse"></i>
-                        <p class="text-sm text-slate-300 font-medium">Square QR Crop Scanner</p>
-                        <p class="text-xs text-slate-500 mt-1 max-w-xs">Awtomatikong mag-i-scan kapag itapat ang QR Code sa gitna.</p>
+                        <p class="text-sm text-slate-300 font-medium">Square QR Code Scanner</p>
+                        <p class="text-xs text-slate-500 mt-1 max-w-xs">Itapat ang QR Code sa gitna para awtomatikong ma-scan.</p>
                         <button onclick="startScanner()" class="mt-4 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg shadow-lg transition flex items-center gap-2">
                             <i class="fa-solid fa-power-off"></i> Open QR Camera
                         </button>
@@ -109,7 +109,7 @@
                 </div>
             </div>
 
-            <!-- Last Scanned Banner & Transaction History (Right) -->
+            <!-- Last Scanned Visual Banner & Logs (Right) -->
             <div class="lg:col-span-6 space-y-6">
                 
                 <div id="lastScanCard" class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-3">
@@ -149,14 +149,14 @@
 
         </div>
 
-        <!-- Inventory Master Sheet (Columns simplified: SKU, Product Name, Category, Stock Quantity, Status, Quick Action) -->
+        <!-- Inventory Master Sheet (Simplified: SKU, Name, Category, Stock Quantity, Status, Quick Action) -->
         <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-base font-bold text-white flex items-center gap-2">
                         <i class="fa-solid fa-boxes-stacked text-indigo-400"></i> Inventory Master Sheet
                     </h2>
-                    <p class="text-xs text-slate-400">Awtomatikong nina-navigate at ina-update ang datos sa tuwing nag-scan ng QR Code.</p>
+                    <p class="text-xs text-slate-400">Awtomatikong kukuha ng bagong items mula sa iyong Google Sheet.</p>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2">
@@ -225,7 +225,7 @@
         </div>
     </div>
 
-    <!-- Application Logic -->
+    <!-- Application JavaScript Logic -->
     <script>
         const defaultInventory = [
             { sku: "SKU-LTH-01", name: "Leathers", category: "Leather Goods", qty: 25, threshold: 10 },
@@ -263,18 +263,48 @@
 
         window.addEventListener("DOMContentLoaded", () => {
             loadSavedData();
-            renderInventoryTable();
             renderLogs();
             updateModeUI();
         });
 
+        /* -------------------------------------------------------------
+           LOAD DATA FUNCTION: Pulls live inventory from Google Sheets
+           ------------------------------------------------------------- */
         function loadSavedData() {
-            const savedInv = localStorage.getItem("memorabbylia_inventory");
-            inventory = savedInv ? JSON.parse(savedInv) : [...defaultInventory];
+            webhookUrl = localStorage.getItem("memorabbylia_webhook") || "";
+            if (document.getElementById("webhookUrlInput")) {
+                document.getElementById("webhookUrlInput").value = webhookUrl;
+            }
+
             const savedLogs = localStorage.getItem("memorabbylia_logs");
             logs = savedLogs ? JSON.parse(savedLogs) : [];
-            webhookUrl = localStorage.getItem("memorabbylia_webhook") || "";
-            document.getElementById("webhookUrlInput").value = webhookUrl;
+
+            if (webhookUrl) {
+                // Fetch Live Items and Stock from Google Sheet
+                fetch(webhookUrl)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === "success" && data.inventory && data.inventory.length > 0) {
+                            inventory = data.inventory;
+                            saveData();
+                            renderInventoryTable();
+                        } else {
+                            useFallbackData();
+                        }
+                    })
+                    .catch(err => {
+                        console.log("Using cached offline inventory", err);
+                        useFallbackData();
+                    });
+            } else {
+                useFallbackData();
+            }
+        }
+
+        function useFallbackData() {
+            const savedInv = localStorage.getItem("memorabbylia_inventory");
+            inventory = savedInv ? JSON.parse(savedInv) : [...defaultInventory];
+            renderInventoryTable();
         }
 
         function saveData() {
@@ -305,6 +335,9 @@
             input.value = Math.max(1, (parseInt(input.value) || 1) + delta);
         }
 
+        /* -------------------------------------------------------------
+           CAMERA SCANNER: Square 1:1 Box for QR Codes
+           ------------------------------------------------------------- */
         function startScanner() {
             document.getElementById("scannerOverlay").classList.add("hidden");
             document.getElementById("stopBtn").classList.remove("hidden");
@@ -432,7 +465,6 @@
             }
         }
 
-        // Render Inventory Table (Simplified without Cost & Price)
         function renderInventoryTable() {
             const tbody = document.getElementById("inventoryTableBody");
             const search = document.getElementById("searchInput").value.toLowerCase();
@@ -525,6 +557,7 @@
             localStorage.setItem("memorabbylia_webhook", webhookUrl);
             alert("Google Sheets Webhook URL saved successfully!");
             closeConfigModal();
+            loadSavedData();
         }
 
         function syncToGoogleSheets(sku, newQty, action, qtyChange) {
@@ -565,13 +598,8 @@
         }
 
         function resetDataPrompt() {
-            if (confirm("Reset inventory data back to original state?")) {
-                localStorage.removeItem("memorabbylia_inventory");
-                localStorage.removeItem("memorabbylia_logs");
-                loadSavedData();
-                renderInventoryTable();
-                renderLogs();
-            }
+            loadSavedData();
+            alert("Inihambing at in-update ang inventory mula sa Google Sheets.");
         }
     </script>
 </body>
