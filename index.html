@@ -8,9 +8,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- HTML5 QR Code Library (Camera & Back Camera Handling) -->
+    <!-- HTML5 QR Code Scanner Library -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <!-- QRCode JS for Generator -->
+    <!-- QRCode JS Generator Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         #reader video { object-fit: cover !important; border-radius: 0.75rem; }
@@ -44,7 +44,7 @@
 
     <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
-        <!-- Top Section: Scanner & Controls -->
+        <!-- Top Section: Camera Scanner & Quick Controls -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
             <!-- Scanner Panel (Left) -->
@@ -69,7 +69,7 @@
                     </button>
                 </div>
 
-                <!-- Quantity Step -->
+                <!-- Quantity Step per Scan -->
                 <div class="flex items-center justify-between bg-slate-900/50 p-3 rounded-xl border border-slate-700">
                     <label class="text-xs font-medium text-slate-300">Dami bawat Scan (Qty Per Scan):</label>
                     <div class="flex items-center space-x-2">
@@ -79,12 +79,12 @@
                     </div>
                 </div>
 
-                <!-- QR Camera Viewport -->
+                <!-- Camera Container -->
                 <div class="relative bg-slate-900 rounded-xl overflow-hidden border border-slate-700 aspect-video flex items-center justify-center">
                     <div id="reader" class="w-full h-full"></div>
                     <div id="scannerOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 p-4 text-center">
-                        <i class="fa-solid fa-barcode text-4xl text-slate-500 mb-2"></i>
-                        <p class="text-sm text-slate-300 font-medium">I-click para buksan ang Back Camera</p>
+                        <i class="fa-solid fa-qrcode text-4xl text-slate-500 mb-2"></i>
+                        <p class="text-sm text-slate-300 font-medium">I-click ang button para simulan ang Back Camera</p>
                         <button onclick="startScanner()" class="mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg shadow-lg transition">
                             <i class="fa-solid fa-power-off mr-1.5"></i> Open Back Camera
                         </button>
@@ -98,7 +98,7 @@
                     <span>Manual Input Below</span>
                 </div>
 
-                <!-- Manual Code Input -->
+                <!-- Manual SKU Input -->
                 <div class="flex gap-2">
                     <input type="text" id="manualSkuInput" placeholder="Enter or Paste SKU (e.g., SKU-LTH-01)" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:border-indigo-500 focus:outline-none">
                     <button onclick="submitManualScan()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition">
@@ -107,9 +107,10 @@
                 </div>
             </div>
 
-            <!-- Last Scanned Banner & Transaction History -->
+            <!-- Last Scanned Visual Banner & Logs (Right) -->
             <div class="lg:col-span-6 space-y-6">
                 
+                <!-- Last Action Visual Notification -->
                 <div id="lastScanCard" class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-3">
                     <div class="flex justify-between items-center">
                         <span class="text-xs uppercase tracking-wider font-semibold text-slate-400">Pinakabagong Scan</span>
@@ -127,7 +128,7 @@
                     </div>
                 </div>
 
-                <!-- Recent Activity Log -->
+                <!-- Recent Scan Activity Log -->
                 <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-3">
                     <div class="flex justify-between items-center">
                         <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
@@ -147,7 +148,7 @@
 
         </div>
 
-        <!-- Inventory Master Table -->
+        <!-- Inventory Database Table -->
         <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
             
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -194,7 +195,7 @@
 
     </main>
 
-    <!-- Modal: QR Code Print & Preview -->
+    <!-- Modal: QR Code Generator & Print Preview -->
     <div id="qrModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-slate-800 rounded-2xl border border-slate-700 max-w-sm w-full p-6 text-center space-y-4 relative shadow-2xl">
             <button onclick="closeQrModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
@@ -206,14 +207,14 @@
             <p id="qrModalSub" class="text-xs font-mono text-indigo-400 font-semibold">SKU-000</p>
             
             <button onclick="window.print()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-lg transition">
-                <i class="fa-solid fa-print"></i> Print Label
+                <i class="fa-solid fa-print"></i> Print QR Label
             </button>
         </div>
     </div>
 
-    <!-- Modal: Google Sheets Webhook Settings -->
+    <!-- Modal: Google Sheets Webhook Configuration -->
     <div id="configModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-800 rounded-2xl border border-slate-700 max-w-2xl w-full p-6 space-y-4 relative shadow-2xl">
+        <div class="bg-slate-800 rounded-2xl border border-slate-700 max-w-xl w-full p-6 space-y-4 relative shadow-2xl">
             <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
@@ -223,7 +224,7 @@
             </h3>
 
             <p class="text-xs text-slate-300 leading-relaxed">
-                Para awtomatikong mag-update ang iyong online Google Sheet pagkascan ng QR Code, i-deploy ang Apps Script code at i-paste ang Webhook URL sa ibaba:
+                I-paste ang iyong Google Apps Script Web App URL sa ibaba para mag-sync ang scan sa online Google Sheet:
             </p>
 
             <div class="space-y-1">
@@ -238,7 +239,7 @@
         </div>
     </div>
 
-    <!-- Application JavaScript Code -->
+    <!-- JavaScript Application Logic -->
     <script>
         const defaultInventory = [
             { sku: "SKU-LTH-01", name: "Leathers", category: "Leather Goods", qty: 25, cost: 10, price: 12, threshold: 10 },
@@ -336,6 +337,7 @@
                 html5QrCode = new Html5Qrcode("reader");
             }
 
+            // facingMode: "environment" forces rear camera on smartphone
             html5QrCode.start(
                 { facingMode: "environment" },
                 { fps: 10, qrbox: { width: 250, height: 250 } },
