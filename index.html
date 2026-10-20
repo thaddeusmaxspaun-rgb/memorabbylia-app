@@ -19,12 +19,6 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
 
-    <!-- Toast Notification Popup -->
-    <div id="toastNotification" class="fixed top-5 right-5 z-50 transform translate-x-full transition-all duration-300 ease-out hidden flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl border text-sm font-bold backdrop-blur-md">
-        <i id="toastIcon" class="fa-solid text-xl"></i>
-        <span id="toastMessage">Inventory Updated!</span>
-    </div>
-
     <!-- Header Navigation -->
     <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-lg">
         <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
@@ -155,7 +149,7 @@
 
         </div>
 
-        <!-- Inventory Master Sheet (Simplified: SKU, Name, Category, Stock Quantity, Status, Quick Action) -->
+        <!-- Inventory Master Sheet -->
         <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -176,7 +170,6 @@
                 </div>
             </div>
 
-            <!-- Table without Cost and Price columns -->
             <div class="overflow-x-auto rounded-xl border border-slate-700">
                 <table class="w-full text-left text-xs text-slate-300">
                     <thead class="bg-slate-900 text-slate-400 uppercase font-mono border-b border-slate-700">
@@ -197,6 +190,37 @@
         </div>
 
     </main>
+
+    <!-- Modal: After Scan Confirmation Popup with OK Button -->
+    <div id="scanResultModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-2xl border border-slate-700 max-w-sm w-full p-6 text-center space-y-4 relative shadow-2xl animate-fade-in">
+            <div id="modalIconContainer" class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-inner">
+                <i id="modalIcon" class="fa-solid"></i>
+            </div>
+
+            <div>
+                <h3 id="modalHeadline" class="text-lg font-bold text-slate-100">Inventory Added!</h3>
+                <p id="modalProductName" class="text-sm font-semibold text-indigo-400 mt-0.5">Product Name</p>
+                <p id="modalSkuCode" class="text-xs font-mono text-slate-400">SKU-000</p>
+            </div>
+
+            <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-700 flex justify-around items-center">
+                <div>
+                    <span class="text-[10px] uppercase tracking-wider text-slate-500 block font-semibold">Action</span>
+                    <span id="modalActionText" class="text-xs font-bold text-emerald-400">+1 Added</span>
+                </div>
+                <div class="h-6 w-px bg-slate-700"></div>
+                <div>
+                    <span class="text-[10px] uppercase tracking-wider text-slate-500 block font-semibold">New Stock</span>
+                    <span id="modalNewStock" class="text-xs font-mono font-bold text-white">0 units</span>
+                </div>
+            </div>
+
+            <button onclick="dismissScanResultModal()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-98 text-white font-bold text-sm rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+                <i class="fa-solid fa-check text-base"></i> OK
+            </button>
+        </div>
+    </div>
 
     <!-- Modal: QR Code Print & Preview -->
     <div id="qrModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
@@ -251,8 +275,8 @@
         let currentMode = "IN";
         let html5QrCode = null;
         let webhookUrl = "";
+        let isProcessingScan = false;
 
-        // Beep Audio Feedback
         function playBeep(type = "success") {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -268,39 +292,12 @@
             } catch (e) {}
         }
 
-        // Toast Message Notification Function
-        function showToast(message, type = "success") {
-            const toast = document.getElementById("toastNotification");
-            const toastMsg = document.getElementById("toastMessage");
-            const toastIcon = document.getElementById("toastIcon");
-
-            toastMsg.textContent = message;
-
-            if (type === "success") {
-                toast.className = "fixed top-5 right-5 z-50 transform translate-x-0 transition-all duration-300 ease-out flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl border text-sm font-bold bg-emerald-900/90 text-emerald-200 border-emerald-500 backdrop-blur-md";
-                toastIcon.className = "fa-solid fa-circle-check text-xl text-emerald-400";
-            } else if (type === "warning") {
-                toast.className = "fixed top-5 right-5 z-50 transform translate-x-0 transition-all duration-300 ease-out flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl border text-sm font-bold bg-rose-900/90 text-rose-200 border-rose-500 backdrop-blur-md";
-                toastIcon.className = "fa-solid fa-circle-minus text-xl text-rose-400";
-            } else {
-                toast.className = "fixed top-5 right-5 z-50 transform translate-x-0 transition-all duration-300 ease-out flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl border text-sm font-bold bg-amber-900/90 text-amber-200 border-amber-500 backdrop-blur-md";
-                toastIcon.className = "fa-solid fa-triangle-exclamation text-xl text-amber-400";
-            }
-
-            toast.classList.remove("hidden");
-
-            setTimeout(() => {
-                toast.classList.add("hidden");
-            }, 2500);
-        }
-
         window.addEventListener("DOMContentLoaded", () => {
             loadSavedData();
             renderLogs();
             updateModeUI();
         });
 
-        // Load Live Inventory from Google Sheets
         function loadSavedData() {
             webhookUrl = localStorage.getItem("memorabbylia_webhook") || "";
             if (document.getElementById("webhookUrlInput")) {
@@ -411,14 +408,10 @@
             }
         }
 
-        let isProcessingScan = false;
         function onScanSuccess(decodedText) {
             if (isProcessingScan) return;
             isProcessingScan = true;
-
             processScanCode(decodedText.trim());
-
-            setTimeout(() => { isProcessingScan = false; }, 1500);
         }
 
         function onScanError(error) {}
@@ -431,7 +424,7 @@
             }
         }
 
-        // Process Scan Code & Show Toast Popup
+        // Process Scan & Trigger Popup Modal with OK Button
         function processScanCode(code) {
             const qtyChange = parseInt(document.getElementById("scanQtyInput").value) || 1;
             const item = inventory.find(i => i.sku.toUpperCase() === code.toUpperCase() || i.name.toLowerCase() === code.toLowerCase());
@@ -439,22 +432,22 @@
             if (!item) {
                 playBeep("error");
                 updateLastScanUI(false, `SKU Not Found: ${code}`, "Pakisuri kung tama ang SKU code.");
-                showToast(`SKU Not Found: ${code}`, "error");
+                showScanResultModal("SKU Not Found", code, code, "Error", 0, "error");
                 return;
             }
 
             if (currentMode === "IN") {
                 item.qty += qtyChange;
-                showToast(`Inventory Added! (+${qtyChange} ${item.name})`, "success");
+                showScanResultModal("Inventory Added!", item.name, item.sku, `+${qtyChange} Dagdag`, item.qty, "IN");
             } else {
                 if (item.qty < qtyChange) {
                     playBeep("error");
                     alert(`Kulang ang stock! Kasalukuyang stock ng ${item.name} ay ${item.qty} lamang.`);
-                    showToast(`Kulang ang stock para sa ${item.name}!`, "error");
+                    showScanResultModal("Insufficient Stock!", item.name, item.sku, "Error", item.qty, "error");
                     return;
                 }
                 item.qty -= qtyChange;
-                showToast(`Inventory Deducted! (-${qtyChange} ${item.name})`, "warning");
+                showScanResultModal("Inventory Deducted!", item.name, item.sku, `-${qtyChange} Bawas`, item.qty, "OUT");
             }
 
             saveData();
@@ -478,6 +471,40 @@
             renderLogs();
 
             syncToGoogleSheets(item.sku, item.qty, currentMode, qtyChange);
+        }
+
+        // Display Modal with OK Button after Scan
+        function showScanResultModal(headline, productName, sku, actionText, newStock, mode) {
+            document.getElementById("modalHeadline").textContent = headline;
+            document.getElementById("modalProductName").textContent = productName;
+            document.getElementById("modalSkuCode").textContent = sku;
+            document.getElementById("modalActionText").textContent = actionText;
+            document.getElementById("modalNewStock").textContent = newStock + " units";
+
+            const iconContainer = document.getElementById("modalIconContainer");
+            const icon = document.getElementById("modalIcon");
+
+            if (mode === "IN") {
+                iconContainer.className = "w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto bg-emerald-900/60 text-emerald-400 border border-emerald-500/50";
+                icon.className = "fa-solid fa-circle-check";
+                document.getElementById("modalActionText").className = "text-xs font-bold text-emerald-400";
+            } else if (mode === "OUT") {
+                iconContainer.className = "w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto bg-rose-900/60 text-rose-400 border border-rose-500/50";
+                icon.className = "fa-solid fa-circle-minus";
+                document.getElementById("modalActionText").className = "text-xs font-bold text-rose-400";
+            } else {
+                iconContainer.className = "w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto bg-amber-900/60 text-amber-400 border border-amber-500/50";
+                icon.className = "fa-solid fa-triangle-exclamation";
+                document.getElementById("modalActionText").className = "text-xs font-bold text-amber-400";
+            }
+
+            document.getElementById("scanResultModal").classList.remove("hidden");
+        }
+
+        // Dismiss Modal and Resume Scanner
+        function dismissScanResultModal() {
+            document.getElementById("scanResultModal").classList.add("hidden");
+            isProcessingScan = false; // Unlocks scanner for next scan
         }
 
         function updateLastScanUI(success, title, sub, mode = "IN") {
@@ -547,7 +574,7 @@
             saveData();
             renderInventoryTable();
             syncToGoogleSheets(item.sku, item.qty, delta > 0 ? "IN" : "OUT", Math.abs(delta));
-            showToast(delta > 0 ? `Inventory Added! (+1 ${item.name})` : `Inventory Deducted! (-1 ${item.name})`, delta > 0 ? "success" : "warning");
+            showScanResultModal(delta > 0 ? "Inventory Added!" : "Inventory Deducted!", item.name, item.sku, delta > 0 ? "+1 Added" : "-1 Deducted", item.qty, delta > 0 ? "IN" : "OUT");
         }
 
         function renderLogs() {
@@ -633,7 +660,7 @@
 
         function resetDataPrompt() {
             loadSavedData();
-            showToast("In-update ang inventory mula sa Google Sheets!", "success");
+            alert("In-update ang inventory mula sa Google Sheets!");
         }
     </script>
 </body>
