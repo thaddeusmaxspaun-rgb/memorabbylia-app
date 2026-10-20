@@ -45,7 +45,7 @@
 
     <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
-        <!-- Top Section: Scanner & Controls -->
+        <!-- Top Section: Scanner & Quick Controls -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
             <!-- Square QR Camera Scanner Panel (Left) -->
@@ -63,16 +63,16 @@
                 <!-- Mode Toggles: Stock In vs Stock Out -->
                 <div class="grid grid-cols-2 gap-3 p-1.5 bg-slate-900/80 rounded-xl border border-slate-700">
                     <button id="modeInBtn" onclick="setScanMode('IN')" class="py-2.5 px-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition bg-emerald-600 text-white shadow">
-                        <i class="fa-solid fa-circle-plus text-base"></i> Dagdag Stock (+ IN)
+                        <i class="fa-solid fa-circle-plus text-base"></i> Stock In (+ IN)
                     </button>
                     <button id="modeOutBtn" onclick="setScanMode('OUT')" class="py-2.5 px-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition bg-slate-800 text-slate-400 hover:text-slate-200">
-                        <i class="fa-solid fa-circle-minus text-base"></i> Bawas Stock (- OUT)
+                        <i class="fa-solid fa-circle-minus text-base"></i> Stock Out (- OUT)
                     </button>
                 </div>
 
                 <!-- Quantity Step -->
                 <div class="flex items-center justify-between bg-slate-900/50 p-3 rounded-xl border border-slate-700">
-                    <label class="text-xs font-medium text-slate-300">Dami bawat Scan (Qty Per Scan):</label>
+                    <label class="text-xs font-medium text-slate-300">Quantity per Scan:</label>
                     <div class="flex items-center space-x-2">
                         <button onclick="adjustScanQty(-1)" class="w-8 h-8 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold flex items-center justify-center">-</button>
                         <input type="number" id="scanQtyInput" value="1" min="1" class="w-16 text-center bg-slate-800 border border-slate-600 rounded-lg py-1 font-bold text-emerald-400 focus:outline-none">
@@ -86,7 +86,7 @@
                     <div id="scannerOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 p-4 text-center z-10">
                         <i class="fa-solid fa-qrcode text-5xl text-indigo-400 mb-3 animate-pulse"></i>
                         <p class="text-sm text-slate-300 font-medium">Square QR Code Scanner</p>
-                        <p class="text-xs text-slate-500 mt-1 max-w-xs">Itapat ang QR Code sa gitna para sa awtomatikong pag-scan.</p>
+                        <p class="text-xs text-slate-500 mt-1 max-w-xs">Align the QR code within the target area to scan automatically.</p>
                         <button onclick="startScanner()" class="mt-4 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg shadow-lg transition flex items-center gap-2">
                             <i class="fa-solid fa-power-off"></i> Open QR Camera
                         </button>
@@ -114,7 +114,7 @@
                 
                 <div id="lastScanCard" class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-3">
                     <div class="flex justify-between items-center">
-                        <span class="text-xs uppercase tracking-wider font-semibold text-slate-400">Pinakabagong Scan</span>
+                        <span class="text-xs uppercase tracking-wider font-semibold text-slate-400">Latest Scan</span>
                         <span id="lastScanTime" class="text-xs font-mono text-slate-500">--:--:--</span>
                     </div>
 
@@ -123,8 +123,8 @@
                             <i class="fa-solid fa-box-archive"></i>
                         </div>
                         <div>
-                            <div id="lastScanTitle" class="font-bold text-slate-200 text-base">Wala pang na-i-scan</div>
-                            <div id="lastScanSub" class="text-xs text-slate-400">I-scan ang QR Code ng produkto para ma-update ang stock.</div>
+                            <div id="lastScanTitle" class="font-bold text-slate-200 text-base">No items scanned yet</div>
+                            <div id="lastScanSub" class="text-xs text-slate-400">Scan a product QR Code to update stock levels.</div>
                         </div>
                     </div>
                 </div>
@@ -141,7 +141,7 @@
                     </div>
 
                     <div class="overflow-y-auto max-h-56 pr-1 space-y-2" id="logsContainer">
-                        <div class="text-xs text-slate-500 text-center py-6">Walang history ng scan.</div>
+                        <div class="text-xs text-slate-500 text-center py-6">No scan history available.</div>
                     </div>
                 </div>
 
@@ -149,14 +149,14 @@
 
         </div>
 
-        <!-- Master Inventory Table (Without Cost & Price) -->
+        <!-- Master Inventory Table -->
         <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-base font-bold text-white flex items-center gap-2">
                         <i class="fa-solid fa-boxes-stacked text-indigo-400"></i> Inventory Master Sheet
                     </h2>
-                    <p class="text-xs text-slate-400">Awtomatikong kukuha ng bagong items mula sa iyong Google Sheet.</p>
+                    <p class="text-xs text-slate-400">Automatically pulls new items and live updates from your Google Sheet.</p>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2">
@@ -246,7 +246,7 @@
             <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
                 <i class="fa-brands fa-google-drive text-emerald-400"></i> Connect Google Sheets Live Sync
             </h3>
-            <p class="text-xs text-slate-300">I-paste ang Google Apps Script Web App URL para mag-sync sa Google Sheet:</p>
+            <p class="text-xs text-slate-300">Paste your Google Apps Script Web App URL below to sync live with Google Sheets:</p>
             <input type="url" id="webhookUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-emerald-300 focus:outline-none focus:border-indigo-500">
             <div class="flex justify-end gap-2 pt-2">
                 <button onclick="closeConfigModal()" class="px-4 py-2 bg-slate-700 text-slate-300 text-xs font-medium rounded-lg">Cancel</button>
@@ -424,36 +424,36 @@
             }
         }
 
-        // Process Scan & Trigger Confirmation Modal
+        // Process Scan & Trigger Confirmation Modal in English
         function processScanCode(code) {
             const qtyChange = parseInt(document.getElementById("scanQtyInput").value) || 1;
             const item = inventory.find(i => i.sku.toUpperCase() === code.toUpperCase() || i.name.toLowerCase() === code.toLowerCase());
 
             if (!item) {
                 playBeep("error");
-                updateLastScanUI(false, `SKU Not Found: ${code}`, "Pakisuri kung tama ang SKU code.");
+                updateLastScanUI(false, `SKU Not Found: ${code}`, "Please check if the SKU code is correct.");
                 showScanResultModal("SKU Not Found", code, code, "Error", 0, "error");
                 return;
             }
 
             if (currentMode === "IN") {
                 item.qty += qtyChange;
-                showScanResultModal("Inventory Added!", item.name, item.sku, `+${qtyChange} Dagdag`, item.qty, "IN");
+                showScanResultModal("Inventory Added!", item.name, item.sku, `+${qtyChange} Added`, item.qty, "IN");
             } else {
                 if (item.qty < qtyChange) {
                     playBeep("error");
-                    alert(`Kulang ang stock! Kasalukuyang stock ng ${item.name} ay ${item.qty} lamang.`);
+                    alert(`Insufficient stock! Current stock for ${item.name} is only ${item.qty}.`);
                     showScanResultModal("Insufficient Stock!", item.name, item.sku, "Error", item.qty, "error");
                     return;
                 }
                 item.qty -= qtyChange;
-                showScanResultModal("Inventory Deducted!", item.name, item.sku, `-${qtyChange} Bawas`, item.qty, "OUT");
+                showScanResultModal("Inventory Deducted!", item.name, item.sku, `-${qtyChange} Deducted`, item.qty, "OUT");
             }
 
             saveData();
             playBeep("success");
 
-            const actionText = currentMode === "IN" ? `+${qtyChange} Dagdag Stock` : `-${qtyChange} Bawas Stock`;
+            const actionText = currentMode === "IN" ? `+${qtyChange} Stock Added` : `-${qtyChange} Stock Deducted`;
             
             logs.unshift({
                 timestamp: new Date().toLocaleTimeString(),
@@ -466,14 +466,14 @@
             if (logs.length > 50) logs.pop();
             saveData();
 
-            updateLastScanUI(true, `${item.name} (${item.sku})`, `${actionText} | Bagong Stock: ${item.qty} units`, currentMode);
+            updateLastScanUI(true, `${item.name} (${item.sku})`, `${actionText} | New Stock: ${item.qty} units`, currentMode);
             renderInventoryTable();
             renderLogs();
 
             syncToGoogleSheets(item.sku, item.qty, currentMode, qtyChange);
         }
 
-        // Display Modal with OK Button
+        // Display Modal with OK Button in English
         function showScanResultModal(headline, productName, sku, actionText, newStock, mode) {
             document.getElementById("modalHeadline").textContent = headline;
             document.getElementById("modalProductName").textContent = productName;
@@ -504,7 +504,7 @@
         // Dismiss Modal & Resume Scanner
         function dismissScanResultModal() {
             document.getElementById("scanResultModal").classList.add("hidden");
-            isProcessingScan = false; // Unlocks camera scanner
+            isProcessingScan = false;
         }
 
         function updateLastScanUI(success, title, sub, mode = "IN") {
@@ -553,8 +553,8 @@
                     <td class="px-4 py-3 text-center">${statusBadge}</td>
                     <td class="px-4 py-3 text-center">
                         <div class="flex items-center justify-center space-x-1">
-                            <button onclick="quickAdjust('${item.sku}', 1)" class="p-1 px-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold" title="Dagdag 1">+</button>
-                            <button onclick="quickAdjust('${item.sku}', -1)" class="p-1 px-2 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs font-bold" title="Bawas 1">-</button>
+                            <button onclick="quickAdjust('${item.sku}', 1)" class="p-1 px-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold" title="Add 1">+</button>
+                            <button onclick="quickAdjust('${item.sku}', -1)" class="p-1 px-2 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs font-bold" title="Deduct 1">-</button>
                             <button onclick="showQrModal('${item.sku}', '${item.name}')" class="p-1 px-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded text-xs" title="View QR"><i class="fa-solid fa-qrcode"></i></button>
                         </div>
                     </td>
@@ -567,7 +567,7 @@
             const item = inventory.find(i => i.sku === sku);
             if (!item) return;
             if (delta < 0 && item.qty < Math.abs(delta)) {
-                alert("Hindi maaaring maging negative ang stock.");
+                alert("Stock quantity cannot be negative.");
                 return;
             }
             item.qty += delta;
@@ -580,7 +580,7 @@
         function renderLogs() {
             const container = document.getElementById("logsContainer");
             if (logs.length === 0) {
-                container.innerHTML = `<div class="text-xs text-slate-500 text-center py-6">Walang history ng scan.</div>`;
+                container.innerHTML = `<div class="text-xs text-slate-500 text-center py-6">No scan history available.</div>`;
                 return;
             }
 
@@ -621,7 +621,6 @@
             loadSavedData();
         }
 
-        // Formats & Sends Timestamp for Column K
         function syncToGoogleSheets(sku, newQty, action, qtyChange) {
             if (!webhookUrl) return;
 
@@ -669,7 +668,7 @@
 
         function resetDataPrompt() {
             loadSavedData();
-            alert("In-update ang inventory mula sa Google Sheets!");
+            alert("Inventory updated from Google Sheets!");
         }
     </script>
 </body>
