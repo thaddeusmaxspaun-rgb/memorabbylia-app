@@ -11,7 +11,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-    #reader video { object-fit: cover; border-radius: 0.75rem; }
+    #reader video { object-fit: cover; border-radius: 0.75rem; width: 100% !important; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans pb-20">
@@ -46,25 +46,25 @@
 
     <!-- 1. SCANNER TAB -->
     <section id="view-scanner" class="space-y-4">
+      
+      <!-- Camera Selection Dropdown -->
       <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
-        <label class="block text-xs font-medium text-slate-400 mb-2 text-center tracking-wider uppercase">Scan Action</label>
-        <div class="grid grid-cols-2 gap-2">
-          <button id="mode-in" onclick="setScanMode('IN')" class="py-2.5 rounded-lg font-bold text-xs flex items-center justify-center space-x-1.5 transition bg-emerald-600 text-white ring-2 ring-emerald-400">
-            <i data-lucide="plus-circle" class="w-4 h-4"></i>
-            <span>STOCK IN (+1)</span>
-          </button>
-          <button id="mode-out" onclick="setScanMode('OUT')" class="py-2.5 rounded-lg font-bold text-xs flex items-center justify-center space-x-1.5 transition bg-slate-700 text-slate-300">
-            <i data-lucide="minus-circle" class="w-4 h-4"></i>
-            <span>STOCK OUT (-1)</span>
-          </button>
-        </div>
+        <label class="block text-xs font-medium text-slate-400 mb-1 flex items-center space-x-1">
+          <i data-lucide="camera" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Active Camera Source</span>
+        </label>
+        <select id="camera-select" onchange="changeCamera(this.value)" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 w-full focus:outline-none focus:border-amber-500">
+          <option value="">Detecting Back Camera...</option>
+        </select>
       </div>
 
+      <!-- Camera Viewer -->
       <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-3 text-center">
         <div id="reader" class="w-full bg-slate-950 rounded-lg overflow-hidden border border-slate-700 min-h-[220px]"></div>
-        <p class="text-xs text-slate-400">Scan souvenir QR Code label</p>
+        <p class="text-xs text-slate-400">Point back camera at souvenir QR Code label</p>
       </div>
 
+      <!-- Feedback Banner -->
       <div id="scan-feedback" class="bg-slate-800/80 border border-slate-700 p-4 rounded-xl text-center hidden">
         <div id="feedback-icon" class="mb-1 flex justify-center"></div>
         <h3 id="feedback-title" class="font-bold text-sm text-white"></h3>
@@ -131,7 +131,7 @@
   </main>
 
   <script>
-    // Paste your deployed Google Apps Script Web App URL here
+    // PASTE YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL HERE
     const GOOGLE_SHEET_API_URL = "YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL";
 
     const souvenirProducts = [
@@ -148,8 +148,8 @@
     ];
 
     let products = JSON.parse(localStorage.getItem('memorabbylia_products')) || souvenirProducts;
-    let activeScanMode = 'IN';
     let isScanningCooldown = false;
+    let html5QrCodeInstance = null;
 
     function saveState() {
       localStorage.setItem('memorabbylia_products', JSON.stringify(products));
@@ -170,20 +170,6 @@
       if (tab === 'overview') initOverview();
     }
 
-    function setScanMode(mode) {
-      activeScanMode = mode;
-      const btnIn = document.getElementById('mode-in');
-      const btnOut = document.getElementById('mode-out');
-
-      if (mode === 'IN') {
-        btnIn.className = "py-2.5 rounded-lg font-bold text-xs flex items-center justify-center space-x-1.5 transition bg-emerald-600 text-white ring-2 ring-emerald-400";
-        btnOut.className = "py-2.5 rounded-lg font-bold text-xs flex items-center justify-center space-x-1.5 transition bg-slate-700 text-slate-300";
-      } else {
-        btnOut.className = "py-2.5 rounded-lg font-bold text-xs flex items-center justify-center space-x-1.5 transition bg-rose-600 text-white ring-2 ring-rose-400";
-        btnIn.className = "py-2.5 rounded-lg font-bold text-xs flex items-center justify-center space-x-1.5 transition bg-slate-700 text-slate-300";
-      }
-    }
-
     function handleScanSuccess(decodedText) {
       if (isScanningCooldown) return;
       isScanningCooldown = true;
@@ -196,31 +182,32 @@
       const titleBox = document.getElementById('feedback-title');
       const bodyBox = document.getElementById('feedback-body');
 
-      feedbackBox.classList.remove('hidden');
-
       if (product) {
-        if (GOOGLE_SHEET_API_URL && !GOOGLE_SHEET_API_URL.includes("YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL")) {
-          fetch(GOOGLE_SHEET_API_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sku: product.sku, action: activeScanMode })
-          }).catch(err => console.error("Sheet sync error:", err));
+        let inputQty = prompt(`Scanned: ${product.name}\nCurrent Stock: ${product.qty} ${product.unit}s\n\nEnter NEW total stock quantity:`, product.qty);
+        
+        if (inputQty !== null && !isNaN(inputQty) && inputQty.trim() !== "") {
+          let newQty = parseInt(inputQty.trim(), 10);
+          product.qty = newQty;
+
+          if (GOOGLE_SHEET_API_URL && !GOOGLE_SHEET_API_URL.includes("YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL")) {
+            fetch(GOOGLE_SHEET_API_URL, {
+              method: "POST",
+              mode: "no-cors",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sku: product.sku, explicitQty: newQty })
+            }).catch(err => console.error("Sheet sync error:", err));
+          }
+
+          saveState();
+
+          feedbackBox.classList.remove('hidden');
+          iconBox.innerHTML = `<i data-lucide="check-circle-2" class="w-8 h-8 text-emerald-400"></i>`;
+          titleBox.innerText = `Updated ${product.name}`;
+          titleBox.className = "font-bold text-sm text-emerald-400";
+          bodyBox.innerText = `Set total stock quantity to ${newQty} ${product.unit}s (Synced to Google Sheet)`;
         }
-
-        if (activeScanMode === 'IN') {
-          product.qty += 1;
-        } else {
-          product.qty = Math.max(0, product.qty - 1);
-        }
-
-        saveState();
-
-        iconBox.innerHTML = `<i data-lucide="check-circle-2" class="w-8 h-8 text-emerald-400"></i>`;
-        titleBox.innerText = `Updated ${product.name}`;
-        titleBox.className = "font-bold text-sm text-emerald-400";
-        bodyBox.innerText = `Action: ${activeScanMode} | Current Stock: ${product.qty} ${product.unit}s`;
       } else {
+        feedbackBox.classList.remove('hidden');
         iconBox.innerHTML = `<i data-lucide="alert-triangle" class="w-8 h-8 text-rose-400"></i>`;
         titleBox.innerText = "SKU Not Recognized";
         titleBox.className = "font-bold text-sm text-rose-400";
@@ -282,17 +269,56 @@
       document.getElementById('ov-margin').innerText = `${profitMargin.toFixed(2)}%`;
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
+    async function startCamera(cameraId) {
+      if (html5QrCodeInstance) {
+        try {
+          await html5QrCodeInstance.stop();
+        } catch(e) {}
+      }
+
+      html5QrCodeInstance = new Html5Qrcode("reader");
+      const config = { fps: 10, qrbox: { width: 200, height: 200 } };
+
+      const cameraConstraint = cameraId ? cameraId : { facingMode: "environment" };
+
+      html5QrCodeInstance.start(
+        cameraConstraint,
+        config,
+        handleScanSuccess
+      ).catch(err => console.error("Camera start error:", err));
+    }
+
+    async function changeCamera(cameraId) {
+      if (cameraId) {
+        await startCamera(cameraId);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
       lucide.createIcons();
       renderInventory();
 
-      const html5QrCode = new Html5QrcodeScanner("reader", {
-        fps: 10,
-        qrbox: { width: 200, height: 200 },
-        rememberLastUsedCamera: true
-      });
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        const cameraSelect = document.getElementById('camera-select');
 
-      html5QrCode.render(handleScanSuccess);
+        if (devices && devices.length > 0) {
+          cameraSelect.innerHTML = devices.map(d => {
+            const isBack = d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('rear') || d.label.toLowerCase().includes('environment');
+            return `<option value="${d.id}" ${isBack ? 'selected' : ''}>${d.label || 'Camera ' + d.id}</option>`;
+          }).join('');
+
+          // Identify back camera or fall back to environmental facing mode
+          const backCam = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('rear') || d.label.toLowerCase().includes('environment'));
+          const selectedCamId = backCam ? backCam.id : devices[devices.length - 1].id;
+          
+          await startCamera(selectedCamId);
+        } else {
+          await startCamera(null);
+        }
+      } catch (e) {
+        await startCamera(null);
+      }
     });
   </script>
 </body>
