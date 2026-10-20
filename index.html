@@ -18,12 +18,13 @@
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
-   
-    <!-- Toast Popup Notification -->
-<div id="toastNotification" class="fixed top-5 right-5 z-50 transform translate-x-full transition-all duration-300 ease-out hidden flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border text-sm font-bold">
-    <i id="toastIcon" class="fa-solid text-lg"></i>
-    <span id="toastMessage">Inventory Updated!</span>
-</div> 
+
+    <!-- Toast Notification Popup -->
+    <div id="toastNotification" class="fixed top-5 right-5 z-50 transform translate-x-full transition-all duration-300 ease-out hidden flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl border text-sm font-bold backdrop-blur-md">
+        <i id="toastIcon" class="fa-solid text-xl"></i>
+        <span id="toastMessage">Inventory Updated!</span>
+    </div>
+
     <!-- Header Navigation -->
     <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-lg">
         <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
@@ -42,7 +43,7 @@
                     <i class="fa-solid fa-link text-emerald-400"></i> Google Sheets Webhook
                 </button>
                 <button onclick="resetDataPrompt()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg border border-slate-600 transition">
-                    <i class="fa-solid fa-rotate"></i> Refresh / Reset
+                    <i class="fa-solid fa-rotate"></i> Refresh Data
                 </button>
             </div>
         </div>
@@ -58,7 +59,7 @@
                 
                 <div class="flex items-center justify-between">
                     <h2 class="text-base font-semibold text-slate-100 flex items-center gap-2">
-                        <i class="fa-solid fa-qrcode text-indigo-400"></i> QR Code Camera Scanner
+                        <i class="fa-solid fa-qrcode text-indigo-400"></i> Dedicated QR Code Scanner
                     </h2>
                     <span id="scanStatusBadge" class="px-2.5 py-1 text-xs rounded-full bg-slate-700 text-slate-300 font-medium">
                         Ready
@@ -91,7 +92,7 @@
                     <div id="scannerOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 p-4 text-center z-10">
                         <i class="fa-solid fa-qrcode text-5xl text-indigo-400 mb-3 animate-pulse"></i>
                         <p class="text-sm text-slate-300 font-medium">Square QR Code Scanner</p>
-                        <p class="text-xs text-slate-500 mt-1 max-w-xs">Itapat ang QR Code sa gitna para awtomatikong ma-scan.</p>
+                        <p class="text-xs text-slate-500 mt-1 max-w-xs">Itapat ang QR Code sa gitna para sa awtomatikong pag-scan.</p>
                         <button onclick="startScanner()" class="mt-4 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg shadow-lg transition flex items-center gap-2">
                             <i class="fa-solid fa-power-off"></i> Open QR Camera
                         </button>
@@ -251,6 +252,7 @@
         let html5QrCode = null;
         let webhookUrl = "";
 
+        // Beep Audio Feedback
         function playBeep(type = "success") {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -266,15 +268,39 @@
             } catch (e) {}
         }
 
+        // Toast Message Notification Function
+        function showToast(message, type = "success") {
+            const toast = document.getElementById("toastNotification");
+            const toastMsg = document.getElementById("toastMessage");
+            const toastIcon = document.getElementById("toastIcon");
+
+            toastMsg.textContent = message;
+
+            if (type === "success") {
+                toast.className = "fixed top-5 right-5 z-50 transform translate-x-0 transition-all duration-300 ease-out flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl border text-sm font-bold bg-emerald-900/90 text-emerald-200 border-emerald-500 backdrop-blur-md";
+                toastIcon.className = "fa-solid fa-circle-check text-xl text-emerald-400";
+            } else if (type === "warning") {
+                toast.className = "fixed top-5 right-5 z-50 transform translate-x-0 transition-all duration-300 ease-out flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl border text-sm font-bold bg-rose-900/90 text-rose-200 border-rose-500 backdrop-blur-md";
+                toastIcon.className = "fa-solid fa-circle-minus text-xl text-rose-400";
+            } else {
+                toast.className = "fixed top-5 right-5 z-50 transform translate-x-0 transition-all duration-300 ease-out flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl border text-sm font-bold bg-amber-900/90 text-amber-200 border-amber-500 backdrop-blur-md";
+                toastIcon.className = "fa-solid fa-triangle-exclamation text-xl text-amber-400";
+            }
+
+            toast.classList.remove("hidden");
+
+            setTimeout(() => {
+                toast.classList.add("hidden");
+            }, 2500);
+        }
+
         window.addEventListener("DOMContentLoaded", () => {
             loadSavedData();
             renderLogs();
             updateModeUI();
         });
 
-        /* -------------------------------------------------------------
-           LOAD DATA FUNCTION: Pulls live inventory from Google Sheets
-           ------------------------------------------------------------- */
+        // Load Live Inventory from Google Sheets
         function loadSavedData() {
             webhookUrl = localStorage.getItem("memorabbylia_webhook") || "";
             if (document.getElementById("webhookUrlInput")) {
@@ -285,7 +311,6 @@
             logs = savedLogs ? JSON.parse(savedLogs) : [];
 
             if (webhookUrl) {
-                // Fetch Live Items and Stock from Google Sheet
                 fetch(webhookUrl)
                     .then(res => res.json())
                     .then(data => {
@@ -340,9 +365,7 @@
             input.value = Math.max(1, (parseInt(input.value) || 1) + delta);
         }
 
-        /* -------------------------------------------------------------
-           CAMERA SCANNER: Square 1:1 Box for QR Codes
-           ------------------------------------------------------------- */
+        // Dedicated Square QR Scanner
         function startScanner() {
             document.getElementById("scannerOverlay").classList.add("hidden");
             document.getElementById("stopBtn").classList.remove("hidden");
@@ -408,6 +431,7 @@
             }
         }
 
+        // Process Scan Code & Show Toast Popup
         function processScanCode(code) {
             const qtyChange = parseInt(document.getElementById("scanQtyInput").value) || 1;
             const item = inventory.find(i => i.sku.toUpperCase() === code.toUpperCase() || i.name.toLowerCase() === code.toLowerCase());
@@ -415,18 +439,22 @@
             if (!item) {
                 playBeep("error");
                 updateLastScanUI(false, `SKU Not Found: ${code}`, "Pakisuri kung tama ang SKU code.");
+                showToast(`SKU Not Found: ${code}`, "error");
                 return;
             }
 
             if (currentMode === "IN") {
                 item.qty += qtyChange;
+                showToast(`Inventory Added! (+${qtyChange} ${item.name})`, "success");
             } else {
                 if (item.qty < qtyChange) {
                     playBeep("error");
                     alert(`Kulang ang stock! Kasalukuyang stock ng ${item.name} ay ${item.qty} lamang.`);
+                    showToast(`Kulang ang stock para sa ${item.name}!`, "error");
                     return;
                 }
                 item.qty -= qtyChange;
+                showToast(`Inventory Deducted! (-${qtyChange} ${item.name})`, "warning");
             }
 
             saveData();
@@ -519,6 +547,7 @@
             saveData();
             renderInventoryTable();
             syncToGoogleSheets(item.sku, item.qty, delta > 0 ? "IN" : "OUT", Math.abs(delta));
+            showToast(delta > 0 ? `Inventory Added! (+1 ${item.name})` : `Inventory Deducted! (-1 ${item.name})`, delta > 0 ? "success" : "warning");
         }
 
         function renderLogs() {
@@ -604,7 +633,7 @@
 
         function resetDataPrompt() {
             loadSavedData();
-            alert("Inihambing at in-update ang inventory mula sa Google Sheets.");
+            showToast("In-update ang inventory mula sa Google Sheets!", "success");
         }
     </script>
 </body>
