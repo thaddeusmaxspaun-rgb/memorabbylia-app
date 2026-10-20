@@ -45,7 +45,7 @@
 
     <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
-        <!-- Top Section: Scanner & Quick Controls -->
+        <!-- Top Section: Scanner & Controls -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
             <!-- Square QR Camera Scanner Panel (Left) -->
@@ -129,7 +129,7 @@
                     </div>
                 </div>
 
-                <!-- Activity Logs -->
+                <!-- Recent Activity Logs -->
                 <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-3">
                     <div class="flex justify-between items-center">
                         <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
@@ -149,7 +149,7 @@
 
         </div>
 
-        <!-- Inventory Master Sheet -->
+        <!-- Master Inventory Table (Without Cost & Price) -->
         <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -193,7 +193,7 @@
 
     <!-- Modal: After Scan Confirmation Popup with OK Button -->
     <div id="scanResultModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-800 rounded-2xl border border-slate-700 max-w-sm w-full p-6 text-center space-y-4 relative shadow-2xl animate-fade-in">
+        <div class="bg-slate-800 rounded-2xl border border-slate-700 max-w-sm w-full p-6 text-center space-y-4 relative shadow-2xl">
             <div id="modalIconContainer" class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-inner">
                 <i id="modalIcon" class="fa-solid"></i>
             </div>
@@ -216,7 +216,7 @@
                 </div>
             </div>
 
-            <button onclick="dismissScanResultModal()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-98 text-white font-bold text-sm rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+            <button onclick="dismissScanResultModal()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl transition shadow-lg flex items-center justify-center gap-2">
                 <i class="fa-solid fa-check text-base"></i> OK
             </button>
         </div>
@@ -362,7 +362,7 @@
             input.value = Math.max(1, (parseInt(input.value) || 1) + delta);
         }
 
-        // Dedicated Square QR Scanner
+        // Dedicated Square 1:1 QR Scanner
         function startScanner() {
             document.getElementById("scannerOverlay").classList.add("hidden");
             document.getElementById("stopBtn").classList.remove("hidden");
@@ -424,7 +424,7 @@
             }
         }
 
-        // Process Scan & Trigger Popup Modal with OK Button
+        // Process Scan & Trigger Confirmation Modal
         function processScanCode(code) {
             const qtyChange = parseInt(document.getElementById("scanQtyInput").value) || 1;
             const item = inventory.find(i => i.sku.toUpperCase() === code.toUpperCase() || i.name.toLowerCase() === code.toLowerCase());
@@ -473,7 +473,7 @@
             syncToGoogleSheets(item.sku, item.qty, currentMode, qtyChange);
         }
 
-        // Display Modal with OK Button after Scan
+        // Display Modal with OK Button
         function showScanResultModal(headline, productName, sku, actionText, newStock, mode) {
             document.getElementById("modalHeadline").textContent = headline;
             document.getElementById("modalProductName").textContent = productName;
@@ -501,10 +501,10 @@
             document.getElementById("scanResultModal").classList.remove("hidden");
         }
 
-        // Dismiss Modal and Resume Scanner
+        // Dismiss Modal & Resume Scanner
         function dismissScanResultModal() {
             document.getElementById("scanResultModal").classList.add("hidden");
-            isProcessingScan = false; // Unlocks scanner for next scan
+            isProcessingScan = false; // Unlocks camera scanner
         }
 
         function updateLastScanUI(success, title, sub, mode = "IN") {
@@ -621,8 +621,17 @@
             loadSavedData();
         }
 
+        // Formats & Sends Timestamp for Column K
         function syncToGoogleSheets(sku, newQty, action, qtyChange) {
             if (!webhookUrl) return;
+
+            const now = new Date();
+            const dateOptions = { month: 'long', day: 'numeric', year: 'numeric' };
+            const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+            
+            const formattedDate = now.toLocaleDateString('en-US', dateOptions);
+            const formattedTime = now.toLocaleTimeString('en-US', timeOptions);
+            const formattedTimestamp = `As of ${formattedDate} ${formattedTime}`;
 
             fetch(webhookUrl, {
                 method: "POST",
@@ -633,7 +642,7 @@
                     newQty: newQty,
                     action: action,
                     qtyChange: qtyChange,
-                    timestamp: new Date().toISOString()
+                    formattedTimestamp: formattedTimestamp
                 })
             }).catch(err => console.error("Sheets sync error:", err));
         }
