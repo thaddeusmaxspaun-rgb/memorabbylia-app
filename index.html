@@ -307,39 +307,39 @@
         }
 
         /* -------------------------------------------------------------
-           CAMERA FUNCTION: Explicit Square Crop Reticle for QR Codes
-           ------------------------------------------------------------- */
-        function startScanner() {
-            document.getElementById("scannerOverlay").classList.add("hidden");
-            document.getElementById("stopBtn").classList.remove("hidden");
-            document.getElementById("scanStatusBadge").textContent = "QR Camera Active";
-            document.getElementById("scanStatusBadge").className = "px-2.5 py-1 text-xs rounded-full bg-indigo-900 text-indigo-300 border border-indigo-700 animate-pulse font-medium";
+   CAMERA FUNCTION: Explicit Square Crop Reticle for QR Codes
+   ------------------------------------------------------------- */
+function startScanner() {
+    document.getElementById("scannerOverlay").classList.add("hidden");
+    document.getElementById("stopBtn").classList.remove("hidden");
+    document.getElementById("scanStatusBadge").textContent = "QR Camera Active";
+    document.getElementById("scanStatusBadge").className = "px-2.5 py-1 text-xs rounded-full bg-indigo-900 text-indigo-300 border border-indigo-700 animate-pulse font-medium";
 
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("reader");
-            }
+    if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+    }
 
-            // Defines a dynamic square QR scanning crop box
-            const qrBoxFunction = function(viewfinderWidth, viewfinderHeight) {
-                const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                const qrBoxSize = Math.floor(minEdge * 0.75);
-                return { width: qrBoxSize, height: qrBoxSize };
-            };
+    // Dynamic square QR box function (Forces width = height)
+    const qrBoxFunction = function(viewfinderWidth, viewfinderHeight) {
+        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+        const qrBoxSize = Math.floor(minEdge * 0.75); // Creates a square box (75% of screen width)
+        return { width: qrBoxSize, height: qrBoxSize };
+    };
 
-            html5QrCode.start(
-                { facingMode: "environment" },
-                { 
-                    fps: 15, 
-                    qrbox: qrBoxFunction,
-                    aspectRatio: 1.0 // Square aspect ratio
-                },
-                onScanSuccess,
-                onScanError
-            ).catch(err => {
-                alert("Camera permission denied or camera not available.");
-                stopScanner();
-            });
-        }
+    html5QrCode.start(
+        { facingMode: "environment" }, // Rear Camera
+        { 
+            fps: 15, 
+            qrbox: qrBoxFunction,       // Square Reticle
+            aspectRatio: 1.0           // 1:1 Aspect Ratio
+        },
+        onScanSuccess,
+        onScanError
+    ).catch(err => {
+        alert("Camera permission denied or camera not available.");
+        stopScanner();
+    });
+}
 
         function stopScanner() {
             if (html5QrCode && html5QrCode.isScanning) {
