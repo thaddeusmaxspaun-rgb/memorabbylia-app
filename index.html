@@ -45,7 +45,21 @@
 
     <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
-        <!-- Top Section: Scanner & Quick Controls -->
+        <!-- NO WEBHOOK BANNER -->
+        <div id="noWebhookBanner" class="bg-amber-900/40 border border-amber-600/50 rounded-2xl p-6 text-center space-y-3 shadow-xl">
+            <div class="w-12 h-12 bg-amber-500/20 text-amber-400 rounded-xl flex items-center justify-center mx-auto text-2xl">
+                <i class="fa-solid fa-plug-circle-exclamation"></i>
+            </div>
+            <h3 class="text-base font-bold text-amber-200">Google Sheets Webhook Required</h3>
+            <p class="text-xs text-amber-300/80 max-w-md mx-auto">
+                No inventory data loaded[cite: 8]. Please connect your Google Sheets Webhook URL to display and manage your items[cite: 8].
+            </p>
+            <button onclick="openConfigModal()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg transition shadow">
+                <i class="fa-solid fa-link mr-1"></i> Connect Webhook Now
+            </button>
+        </div>
+
+        <!-- Top Section: Scanner & Controls -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
             <!-- Square QR Camera Scanner Panel (Left) -->
@@ -129,7 +143,7 @@
                     </div>
                 </div>
 
-                <!-- Recent Activity Logs with Download and Clear Log Buttons -->
+                <!-- Recent Activity Logs -->
                 <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-3">
                     <div class="flex justify-between items-center">
                         <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
@@ -155,8 +169,8 @@
 
         </div>
 
-        <!-- Master Inventory Table -->
-        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
+        <!-- Master Inventory Table (Hidden by default until Webhook is added) -->
+        <div id="inventoryTableSection" class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4 hidden">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-base font-bold text-white flex items-center gap-2">
@@ -263,19 +277,6 @@
 
     <!-- Application JavaScript Logic -->
     <script>
-        const defaultInventory = [
-            { sku: "SKU-LTH-01", name: "Leathers", category: "Leather Goods", qty: 25, threshold: 10 },
-            { sku: "SKU-PRF-02", name: "Perfumes", category: "Fragrance", qty: 40, threshold: 15 },
-            { sku: "SKU-CND-03", name: "Candle", category: "Home Fragrance", qty: 15, threshold: 5 },
-            { sku: "SKU-LNK-04", name: "Lace & Luck", category: "Accessories", qty: 50, threshold: 15 },
-            { sku: "SKU-DFS-05", name: "Diffuser", category: "Home Fragrance", qty: 18, threshold: 5 },
-            { sku: "SKU-TOT-06", name: "Tote Bag", category: "Bags & Accessories", qty: 30, threshold: 10 },
-            { sku: "SKU-SOP-07", name: "Soap / Hand Soap", category: "Personal Care", qty: 60, threshold: 20 },
-            { sku: "SKU-CFE-08", name: "Coffee / Fusion", category: "Souvenir Pack", qty: 45, threshold: 15 },
-            { sku: "SKU-GNP-09", name: "Gentle Pump", category: "Packaging & Dispenser", qty: 80, threshold: 20 },
-            { sku: "SKU-LSL-10", name: "Live Stamping Leather", category: "Custom Stamping Service", qty: 12, threshold: 5 }
-        ];
-
         let inventory = [];
         let logs = [];
         let currentMode = "IN";
@@ -313,7 +314,13 @@
             const savedLogs = localStorage.getItem("memorabbylia_logs");
             logs = savedLogs ? JSON.parse(savedLogs) : [];
 
-            if (webhookUrl) {
+            const tableSection = document.getElementById("inventoryTableSection");
+            const banner = document.getElementById("noWebhookBanner");
+
+            if (webhookUrl && webhookUrl.trim() !== "") {
+                if (tableSection) tableSection.classList.remove("hidden");
+                if (banner) banner.classList.add("hidden");
+
                 fetch(webhookUrl)
                     .then(res => res.json())
                     .then(data => {
@@ -321,23 +328,22 @@
                             inventory = data.inventory;
                             saveData();
                             renderInventoryTable();
-                        } else {
-                            useFallbackData();
                         }
                     })
                     .catch(err => {
-                        console.log("Using cached offline inventory", err);
-                        useFallbackData();
+                        console.log("Offline mode or fetch error:", err);
+                        const savedInv = localStorage.getItem("memorabbylia_inventory");
+                        if (savedInv) {
+                            inventory = JSON.parse(savedInv);
+                            renderInventoryTable();
+                        }
                     });
             } else {
-                useFallbackData();
+                inventory = []; // Keep inventory empty when no link exists
+                if (tableSection) tableSection.classList.add("hidden");
+                if (banner) banner.classList.remove("hidden");
+                renderInventoryTable();
             }
-        }
-
-        function useFallbackData() {
-            const savedInv = localStorage.getItem("memorabbylia_inventory");
-            inventory = savedInv ? JSON.parse(savedInv) : [...defaultInventory];
-            renderInventoryTable();
         }
 
         function saveData() {
@@ -368,7 +374,6 @@
             input.value = Math.max(1, (parseInt(input.value) || 1) + delta);
         }
 
-        // Dedicated Square 1:1 QR Scanner
         function startScanner() {
             document.getElementById("scannerOverlay").classList.add("hidden");
             document.getElementById("stopBtn").classList.remove("hidden");
@@ -430,7 +435,6 @@
             }
         }
 
-        // Process Scan & Trigger Confirmation Modal
         function processScanCode(code) {
             const qtyChange = parseInt(document.getElementById("scanQtyInput").value) || 1;
             const item = inventory.find(i => i.sku.toUpperCase() === code.toUpperCase() || i.name.toLowerCase() === code.toLowerCase());
@@ -479,7 +483,6 @@
             syncToGoogleSheets(item.sku, item.qty, currentMode, qtyChange);
         }
 
-        // Display Modal with OK Button
         function showScanResultModal(headline, productName, sku, actionText, newStock, mode) {
             document.getElementById("modalHeadline").textContent = headline;
             document.getElementById("modalProductName").textContent = productName;
@@ -507,7 +510,6 @@
             document.getElementById("scanResultModal").classList.remove("hidden");
         }
 
-        // Dismiss Modal & Resume Scanner
         function dismissScanResultModal() {
             document.getElementById("scanResultModal").classList.add("hidden");
             isProcessingScan = false;
@@ -531,6 +533,7 @@
             }
         }
 
+        // Render Inventory Table (Updated: Only QR Code action button shown)
         function renderInventoryTable() {
             const tbody = document.getElementById("inventoryTableBody");
             const search = document.getElementById("searchInput").value.toLowerCase();
@@ -558,29 +561,15 @@
                     <td class="px-4 py-3 text-center font-mono font-bold text-base ${isLow ? 'text-amber-400' : 'text-emerald-400'}">${item.qty}</td>
                     <td class="px-4 py-3 text-center">${statusBadge}</td>
                     <td class="px-4 py-3 text-center">
-                        <div class="flex items-center justify-center space-x-1">
-                            <button onclick="quickAdjust('${item.sku}', 1)" class="p-1 px-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold" title="Add 1">+</button>
-                            <button onclick="quickAdjust('${item.sku}', -1)" class="p-1 px-2 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs font-bold" title="Deduct 1">-</button>
-                            <button onclick="showQrModal('${item.sku}', '${item.name}')" class="p-1 px-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded text-xs" title="View QR"><i class="fa-solid fa-qrcode"></i></button>
+                        <div class="flex items-center justify-center">
+                            <button onclick="showQrModal('${item.sku}', '${item.name}')" class="p-1.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow" title="View QR">
+                                <i class="fa-solid fa-qrcode"></i> View QR
+                            </button>
                         </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
-        }
-
-        function quickAdjust(sku, delta) {
-            const item = inventory.find(i => i.sku === sku);
-            if (!item) return;
-            if (delta < 0 && item.qty < Math.abs(delta)) {
-                alert("Stock quantity cannot be negative.");
-                return;
-            }
-            item.qty += delta;
-            saveData();
-            renderInventoryTable();
-            syncToGoogleSheets(item.sku, item.qty, delta > 0 ? "IN" : "OUT", Math.abs(delta));
-            showScanResultModal(delta > 0 ? "Inventory Added!" : "Inventory Deducted!", item.name, item.sku, delta > 0 ? "+1 Added" : "-1 Deducted", item.qty, delta > 0 ? "IN" : "OUT");
         }
 
         function renderLogs() {
@@ -606,7 +595,6 @@
             `).join("");
         }
 
-        // Clear Recent Scan Logs
         function clearLogsPrompt() {
             if (logs.length === 0) {
                 alert("Scan history is already empty.");
