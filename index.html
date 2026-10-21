@@ -114,147 +114,6 @@
                 
                 <div id="lastScanCard" class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-3">
                     <div class="flex justify-between items-center">
-                        <span class="text-xs uppercase tracking-wider font-semiboldMadaling gawin 'yan! Pwedeng i-hide ang buong **Inventory Master Sheet** section (pati na rin ang scanner kung gusto mo) at magpakita lamang ng babala tulad ng *"Please connect Google Sheets Webhook to view inventory"*[cite: 8]. 
-
-Lalabas lamang ang talahanayan kapag may nakasave nang **Webhook URL**[cite: 8].
-
----
-
-### Buong Na-update na `index.html`
-
-I-copy at palitan ang buong nilalaman ng iyong `index.html` sa GitHub gamit ito:
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MemorABBYlia Souvenir QR Inventory Scanner</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
-    <!-- HTML5 QR Code Library -->
-    <script src="[https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js](https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js)"></script>
-    <!-- QRCode JS Generator -->
-    <script src="[https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js](https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js)"></script>
-    <style>
-        #reader { width: 100% !important; border-radius: 0.75rem; overflow: hidden; }
-        #reader video { object-fit: cover !important; border-radius: 0.75rem; }
-    </style>
-</head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
-
-    <!-- Header Navigation -->
-    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
-            <div class="flex items-center space-x-3">
-                <div class="p-2 bg-indigo-600 text-white rounded-lg shadow">
-                    <i class="fa-solid fa-qrcode text-xl"></i>
-                </div>
-                <div>
-                    <h1 class="text-lg font-bold leading-tight text-white">MemorABBYlia Souvenirs</h1>
-                    <p class="text-xs text-slate-400">QR Inventory & Auto-Sync System</p>
-                </div>
-            </div>
-
-            <div class="flex items-center space-x-2">
-                <button onclick="openConfigModal()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium rounded-lg border border-slate-600 transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-link text-emerald-400"></i> Google Sheets Webhook
-                </button>
-                <button onclick="resetDataPrompt()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg border border-slate-600 transition">
-                    <i class="fa-solid fa-rotate"></i> Refresh Data
-                </button>
-            </div>
-        </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
-
-        <!-- NO WEBHOOK WARNING BANNER (Lalabas kapag walang nakalagay na Webhook URL) -->
-        <div id="noWebhookBanner" class="bg-amber-900/40 border border-amber-600/50 rounded-2xl p-6 text-center space-y-3 shadow-xl">
-            <div class="w-12 h-12 bg-amber-500/20 text-amber-400 rounded-xl flex items-center justify-center mx-auto text-2xl">
-                <i class="fa-solid fa-plug-circle-exclamation"></i>
-            </div>
-            <h3 class="text-base font-bold text-amber-200">Google Sheets Webhook Required</h3>
-            <p class="text-xs text-amber-300/80 max-w-md mx-auto">
-                Nakatago ang Master Inventory Data. Mangyaring ikonekta ang iyong Google Apps Script Webhook URL upang maipakita ang mga produkto.
-            </p>
-            <button onclick="openConfigModal()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-lg transition shadow">
-                <i class="fa-solid fa-link mr-1"></i> Connect Webhook Now
-            </button>
-        </div>
-
-        <!-- Top Section: Scanner & Quick Controls -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-            <!-- Square QR Camera Scanner Panel (Left) -->
-            <div class="lg:col-span-6 bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
-                
-                <div class="flex items-center justify-between">
-                    <h2 class="text-base font-semibold text-slate-100 flex items-center gap-2">
-                        <i class="fa-solid fa-qrcode text-indigo-400"></i> Dedicated QR Code Scanner
-                    </h2>
-                    <span id="scanStatusBadge" class="px-2.5 py-1 text-xs rounded-full bg-slate-700 text-slate-300 font-medium">
-                        Ready
-                    </span>
-                </div>
-
-                <!-- Mode Toggles: Stock In vs Stock Out -->
-                <div class="grid grid-cols-2 gap-3 p-1.5 bg-slate-900/80 rounded-xl border border-slate-700">
-                    <button id="modeInBtn" onclick="setScanMode('IN')" class="py-2.5 px-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition bg-emerald-600 text-white shadow">
-                        <i class="fa-solid fa-circle-plus text-base"></i> Stock In (+ IN)
-                    </button>
-                    <button id="modeOutBtn" onclick="setScanMode('OUT')" class="py-2.5 px-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition bg-slate-800 text-slate-400 hover:text-slate-200">
-                        <i class="fa-solid fa-circle-minus text-base"></i> Stock Out (- OUT)
-                    </button>
-                </div>
-
-                <!-- Quantity Step -->
-                <div class="flex items-center justify-between bg-slate-900/50 p-3 rounded-xl border border-slate-700">
-                    <label class="text-xs font-medium text-slate-300">Quantity per Scan:</label>
-                    <div class="flex items-center space-x-2">
-                        <button onclick="adjustScanQty(-1)" class="w-8 h-8 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold flex items-center justify-center">-</button>
-                        <input type="number" id="scanQtyInput" value="1" min="1" class="w-16 text-center bg-slate-800 border border-slate-600 rounded-lg py-1 font-bold text-emerald-400 focus:outline-none">
-                        <button onclick="adjustScanQty(1)" class="w-8 h-8 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold flex items-center justify-center">+</button>
-                    </div>
-                </div>
-
-                <!-- Square QR Camera Viewport -->
-                <div class="relative bg-slate-900 rounded-xl overflow-hidden border border-slate-700 aspect-square max-w-sm mx-auto flex items-center justify-center">
-                    <div id="reader" class="w-full h-full"></div>
-                    <div id="scannerOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 p-4 text-center z-10">
-                        <i class="fa-solid fa-qrcode text-5xl text-indigo-400 mb-3 animate-pulse"></i>
-                        <p class="text-sm text-slate-300 font-medium">Square QR Code Scanner</p>
-                        <p class="text-xs text-slate-500 mt-1 max-w-xs">Align the QR code within the target area to scan automatically.</p>
-                        <button onclick="startScanner()" class="mt-4 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg shadow-lg transition flex items-center gap-2">
-                            <i class="fa-solid fa-power-off"></i> Open QR Camera
-                        </button>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-between text-xs text-slate-400">
-                    <button onclick="stopScanner()" id="stopBtn" class="hidden text-rose-400 hover:text-rose-300 font-medium">
-                        <i class="fa-solid fa-stop text-xs"></i> Stop Camera
-                    </button>
-                    <span>Manual SKU Input Below</span>
-                </div>
-
-                <!-- Manual SKU Input -->
-                <div class="flex gap-2">
-                    <input type="text" id="manualSkuInput" placeholder="Enter or Paste SKU (e.g., SKU-LTH-01)" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:border-indigo-500 focus:outline-none">
-                    <button onclick="submitManualScan()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition">
-                        Submit
-                    </button>
-                </div>
-            </div>
-
-            <!-- Last Scanned Visual Banner & Logs (Right) -->
-            <div class="lg:col-span-6 space-y-6">
-                
-                <div id="lastScanCard" class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-3">
-                    <div class="flex justify-between items-center">
                         <span class="text-xs uppercase tracking-wider font-semibold text-slate-400">Latest Scan</span>
                         <span id="lastScanTime" class="text-xs font-mono text-slate-500">--:--:--</span>
                     </div>
@@ -270,7 +129,7 @@ I-copy at palitan ang buong nilalaman ng iyong `index.html` sa GitHub gamit ito:
                     </div>
                 </div>
 
-                <!-- Recent Activity Logs -->
+                <!-- Recent Activity Logs with Download and Clear Log Buttons -->
                 <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-3">
                     <div class="flex justify-between items-center">
                         <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
@@ -296,8 +155,8 @@ I-copy at palitan ang buong nilalaman ng iyong `index.html` sa GitHub gamit ito:
 
         </div>
 
-        <!-- Master Inventory Table Section (NAKA-HIDE HANGGA'T WALANG WEBHOOK URL) -->
-        <div id="inventoryTableSection" class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4 hidden">
+        <!-- Master Inventory Table -->
+        <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-base font-bold text-white flex items-center gap-2">
@@ -394,7 +253,7 @@ I-copy at palitan ang buong nilalaman ng iyong `index.html` sa GitHub gamit ito:
                 <i class="fa-brands fa-google-drive text-emerald-400"></i> Connect Google Sheets Live Sync
             </h3>
             <p class="text-xs text-slate-300">Paste your Google Apps Script Web App URL below to sync live with Google Sheets:</p>
-            <input type="url" id="webhookUrlInput" placeholder="[https://script.google.com/macros/s/.../exec](https://script.google.com/macros/s/.../exec)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-emerald-300 focus:outline-none focus:border-indigo-500">
+            <input type="url" id="webhookUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-emerald-300 focus:outline-none focus:border-indigo-500">
             <div class="flex justify-end gap-2 pt-2">
                 <button onclick="closeConfigModal()" class="px-4 py-2 bg-slate-700 text-slate-300 text-xs font-medium rounded-lg">Cancel</button>
                 <button onclick="saveWebhookConfig()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow">Save Connection</button>
@@ -404,6 +263,19 @@ I-copy at palitan ang buong nilalaman ng iyong `index.html` sa GitHub gamit ito:
 
     <!-- Application JavaScript Logic -->
     <script>
+        const defaultInventory = [
+            { sku: "SKU-LTH-01", name: "Leathers", category: "Leather Goods", qty: 25, threshold: 10 },
+            { sku: "SKU-PRF-02", name: "Perfumes", category: "Fragrance", qty: 40, threshold: 15 },
+            { sku: "SKU-CND-03", name: "Candle", category: "Home Fragrance", qty: 15, threshold: 5 },
+            { sku: "SKU-LNK-04", name: "Lace & Luck", category: "Accessories", qty: 50, threshold: 15 },
+            { sku: "SKU-DFS-05", name: "Diffuser", category: "Home Fragrance", qty: 18, threshold: 5 },
+            { sku: "SKU-TOT-06", name: "Tote Bag", category: "Bags & Accessories", qty: 30, threshold: 10 },
+            { sku: "SKU-SOP-07", name: "Soap / Hand Soap", category: "Personal Care", qty: 60, threshold: 20 },
+            { sku: "SKU-CFE-08", name: "Coffee / Fusion", category: "Souvenir Pack", qty: 45, threshold: 15 },
+            { sku: "SKU-GNP-09", name: "Gentle Pump", category: "Packaging & Dispenser", qty: 80, threshold: 20 },
+            { sku: "SKU-LSL-10", name: "Live Stamping Leather", category: "Custom Stamping Service", qty: 12, threshold: 5 }
+        ];
+
         let inventory = [];
         let logs = [];
         let currentMode = "IN";
@@ -432,7 +304,6 @@ I-copy at palitan ang buong nilalaman ng iyong `index.html` sa GitHub gamit ito:
             updateModeUI();
         });
 
-        // KINUKUHA ANG DATA MULA SA GOOGLE SHEETS & KINA-KONTROL ANG VISIBILITY NG TABLE
         function loadSavedData() {
             webhookUrl = localStorage.getItem("memorabbylia_webhook") || "";
             if (document.getElementById("webhookUrlInput")) {
@@ -442,14 +313,7 @@ I-copy at palitan ang buong nilalaman ng iyong `index.html` sa GitHub gamit ito:
             const savedLogs = localStorage.getItem("memorabbylia_logs");
             logs = savedLogs ? JSON.parse(savedLogs) : [];
 
-            const tableSection = document.getElementById("inventoryTableSection");
-            const banner = document.getElementById("noWebhookBanner");
-
-            if (webhookUrl && webhookUrl.trim() !== "") {
-                // Ipakita ang table at itago ang warning banner kapag may Webhook URL[cite: 8]
-                if (tableSection) tableSection.classList.remove("hidden");
-                if (banner) banner.classList.add("hidden");
-
+            if (webhookUrl) {
                 fetch(webhookUrl)
                     .then(res => res.json())
                     .then(data => {
@@ -457,21 +321,23 @@ I-copy at palitan ang buong nilalaman ng iyong `index.html` sa GitHub gamit ito:
                             inventory = data.inventory;
                             saveData();
                             renderInventoryTable();
+                        } else {
+                            useFallbackData();
                         }
                     })
                     .catch(err => {
                         console.log("Using cached offline inventory", err);
-                        const savedInv = localStorage.getItem("memorabbylia_inventory");
-                        if (savedInv) {
-                            inventory = JSON.parse(savedInv);
-                            renderInventoryTable();
-                        }
+                        useFallbackData();
                     });
             } else {
-                // ITAGO ANG TABLE AT IPAKITA ANG WARNING KANAG WALANG WEBHOOK[cite: 8]
-                if (tableSection) tableSection.classList.add("hidden");
-                if (banner) banner.classList.remove("hidden");
+                useFallbackData();
             }
+        }
+
+        function useFallbackData() {
+            const savedInv = localStorage.getItem("memorabbylia_inventory");
+            inventory = savedInv ? JSON.parse(savedInv) : [...defaultInventory];
+            renderInventoryTable();
         }
 
         function saveData() {
@@ -564,7 +430,7 @@ I-copy at palitan ang buong nilalaman ng iyong `index.html` sa GitHub gamit ito:
             }
         }
 
-        // Process Scan & Trigger Confirmation Modal in English
+        // Process Scan & Trigger Confirmation Modal
         function processScanCode(code) {
             const qtyChange = parseInt(document.getElementById("scanQtyInput").value) || 1;
             const item = inventory.find(i => i.sku.toUpperCase() === code.toUpperCase() || i.name.toLowerCase() === code.toLowerCase());
@@ -613,7 +479,7 @@ I-copy at palitan ang buong nilalaman ng iyong `index.html` sa GitHub gamit ito:
             syncToGoogleSheets(item.sku, item.qty, currentMode, qtyChange);
         }
 
-        // Display Modal with OK Button in English
+        // Display Modal with OK Button
         function showScanResultModal(headline, productName, sku, actionText, newStock, mode) {
             document.getElementById("modalHeadline").textContent = headline;
             document.getElementById("modalProductName").textContent = productName;
