@@ -33,7 +33,7 @@
             </div>
 
             <div class="flex items-center space-x-2">
-                <button onclick="openAddModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition flex items-center gap-1.5">
+                <button onclick="openAddModal()" id="addSouvenirBtn" class="hidden px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow transition flex items-center gap-1.5">
                     <i class="fa-solid fa-plus"></i> Add New Souvenir
                 </button>
                 <button onclick="openConfigModal()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium rounded-lg border border-slate-600 transition flex items-center gap-1.5">
@@ -158,8 +158,8 @@
 
         </div>
 
-        <!-- Master Inventory Table -->
-        <div id="inventoryTableSection" class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
+        <!-- Master Inventory Table (Hidden by default until Webhook is configured) -->
+        <div id="inventoryTableSection" class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4 hidden">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-base font-bold text-white flex items-center gap-2">
@@ -203,7 +203,7 @@
 
     </main>
 
-    <!-- Modal: Add New Souvenir / Item (Cost & Price Removed) -->
+    <!-- Modal: Add New Souvenir -->
     <div id="addModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-slate-800 rounded-2xl border border-slate-700 max-w-md w-full p-6 space-y-4 relative shadow-2xl">
             <button onclick="closeAddModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
@@ -212,7 +212,7 @@
             <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
                 <i class="fa-solid fa-circle-plus text-indigo-400"></i> Add New Souvenir Item
             </h3>
-            <p class="text-xs text-slate-400">Fill in the item details. This will be saved locally and synced directly to your Google Sheet INVENTORY tab.</p>
+            <p class="text-xs text-slate-400">Fill in the item details. This will be saved and synced directly to your Google Sheet INVENTORY tab.</p>
 
             <div class="space-y-3">
                 <div>
@@ -321,9 +321,16 @@
         let isProcessingScan = false;
 
         const defaultInventory = [
-            { sku: "SKU-LTH-01", name: "Wallet", category: "Accessories", qty: 33, threshold: 10 },
-            { sku: "SKU-PRF-02", name: "Perfumes", category: "Fragrance", qty: 0, threshold: 15 },
-            { sku: "SKU-CND-03", name: "Candle", category: "Home Fragrance", qty: 1, threshold: 5 }
+            { sku: "KEY-STP-RNDM-CLR-01", name: "Keychain Strap with Belt Clip", category: "Leather Goods / Keychains & Key Organizers", qty: 414, threshold: 200 },
+            { sku: "TAG-LTH-RNDM-CLR-02", name: "Luggage Tag", category: "Leather Goods / Keychains & Key Organizers", qty: 528, threshold: 200 },
+            { sku: "GLS-LTH-RNDM-CLR-03", name: "Eyeglasses Case", category: "Leather Goods / Keychains & Key Organizers", qty: 89, threshold: 200 },
+            { sku: "BAG-LTH-RNDM-CLR-04", name: "Bag Tag", category: "Leather Goods / Keychains & Key Organizers", qty: 85, threshold: 200 },
+            { sku: "COP-LTH-RNDM-CLR-05", name: "Coin Purse", category: "Leather Goods / Keychains & Key Organizers", qty: 310, threshold: 200 },
+            { sku: "CDH-LTH-RNDM-CLR-06", name: "Card Holder", category: "Leather Goods / Keychains & Key Organizers", qty: 216, threshold: 200 },
+            { sku: "PPH-LTH-RNDM-CLR-07", name: "Passport Holder", category: "Leather Goods / Keychains & Key Organizers", qty: 148, threshold: 200 },
+            { sku: "PPC-LTH-RNDM-CLR-08", name: "Passport Cover", category: "Leather Goods / Keychains & Key Organizers", qty: 0, threshold: 200 },
+            { sku: "EVP-LTH-RNDM-CLR-09", name: "Envelope Holder", category: "Leather Goods / Keychains & Key Organizers", qty: 65, threshold: 200 },
+            { sku: "UTP-LTH-RNDM-CLR-10", name: "Utility Pouch", category: "Leather Goods / Keychains & Key Organizers", qty: 24, threshold: 200 }
         ];
 
         function playBeep(type = "success") {
@@ -345,7 +352,20 @@
             loadSavedData();
             renderLogs();
             updateModeUI();
+            checkWebhookVisibility();
         });
+
+        function checkWebhookVisibility() {
+            const tableSection = document.getElementById("inventoryTableSection");
+            const addBtn = document.getElementById("addSouvenirBtn");
+            if (webhookUrl && webhookUrl.trim() !== "") {
+                tableSection.classList.remove("hidden");
+                addBtn.classList.remove("hidden");
+            } else {
+                tableSection.classList.add("hidden");
+                addBtn.classList.add("hidden");
+            }
+        }
 
         function loadSavedData() {
             webhookUrl = localStorage.getItem("memorabbylia_webhook") || "";
@@ -356,9 +376,26 @@
             const savedLogs = localStorage.getItem("memorabbylia_logs");
             logs = savedLogs ? JSON.parse(savedLogs) : [];
 
-            const savedInv = localStorage.getItem("memorabbylia_inventory");
-            inventory = savedInv ? JSON.parse(savedInv) : [...defaultInventory];
-            renderInventoryTable();
+            if (webhookUrl && webhookUrl.trim() !== "") {
+                fetch(webhookUrl)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === "success" && data.inventory && data.inventory.length > 0) {
+                            inventory = data.inventory;
+                            saveData();
+                            renderInventoryTable();
+                        }
+                    })
+                    .catch(err => {
+                        const savedInv = localStorage.getItem("memorabbylia_inventory");
+                        inventory = savedInv ? JSON.parse(savedInv) : [...defaultInventory];
+                        renderInventoryTable();
+                    });
+            } else {
+                const savedInv = localStorage.getItem("memorabbylia_inventory");
+                inventory = savedInv ? JSON.parse(savedInv) : [...defaultInventory];
+                renderInventoryTable();
+            }
         }
 
         function saveData() {
@@ -413,7 +450,6 @@
             renderInventoryTable();
             closeAddModal();
 
-            // Clear inputs
             document.getElementById("newProdName").value = "";
             document.getElementById("newProdQty").value = "10";
             document.getElementById("newProdThreshold").value = "5";
@@ -608,9 +644,9 @@
                 const tr = document.createElement("tr");
                 tr.className = "hover:bg-slate-700/40 transition";
 
-                const isLow = item.qty <= item.threshold;
+                const isLow = item.qty <= (item.threshold || 5);
                 const statusBadge = isLow 
-                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">Low Stock (${item.threshold})</span>`
+                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">Low Stock</span>`
                     : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">OK</span>`;
 
                 tr.innerHTML = `
@@ -680,8 +716,10 @@
         function saveWebhookConfig() {
             webhookUrl = document.getElementById("webhookUrlInput").value.trim();
             localStorage.setItem("memorabbylia_webhook", webhookUrl);
-            alert("Webhook URL saved successfully!");
+            alert("Webhook URL saved successfully! Master Inventory is now unlocked.");
             closeConfigModal();
+            checkWebhookVisibility();
+            loadSavedData();
         }
 
         function syncToGoogleSheets(sku, newQty, action, qtyChange) {
