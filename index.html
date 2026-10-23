@@ -15,18 +15,28 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
 
-    <!-- Toast Notification Banner with OK Button -->
-    <div id="toastNotification" class="fixed top-5 right-5 z-50 transform translate-x-full transition-all duration-300 bg-slate-800 border border-emerald-500/50 text-slate-100 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3">
-        <div id="toastIcon" class="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 flex items-center justify-center">
-            <i class="fa-solid fa-check"></i>
+    <!-- Scan Result Popup Modal (Center Screen) -->
+    <div id="scanResultModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-2xl border border-slate-700 max-w-sm w-full p-6 text-center space-y-4 relative shadow-2xl animate-scaleIn">
+            <div id="scanResultIcon" class="w-16 h-16 rounded-2xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-3xl mx-auto border border-emerald-500/30">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <div>
+                <h3 id="scanResultTitle" class="text-lg font-bold text-slate-100">Stock Added Successfully!</h3>
+                <p id="scanResultDesc" class="text-xs text-slate-300 mt-1">Product Name (SKU)</p>
+                <div id="scanResultDetails" class="mt-3 p-3 bg-slate-900 rounded-xl font-mono text-xs text-emerald-400 font-bold border border-slate-700">
+                    +1 Unit | New Balance: 25
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-2">
+                <button onclick="closeScanModal(true)" class="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-qrcode"></i> Continue to Scan
+                </button>
+                <button onclick="closeScanModal(false)" class="py-2.5 px-4 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold text-xs rounded-xl border border-slate-600 transition">
+                    OK
+                </button>
+            </div>
         </div>
-        <div>
-            <div id="toastTitle" class="text-xs font-bold">Success!</div>
-            <div id="toastMsg" class="text-[11px] text-slate-400">Data synced successfully.</div>
-        </div>
-        <button onclick="closeToast()" class="ml-2 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition">
-            OK
-        </button>
     </div>
 
     <!-- Header Navigation -->
@@ -305,23 +315,35 @@
             "Gift Set Box"
         ];
 
-        let toastTimer = null;
-        function showToast(title, message) {
-            const toast = document.getElementById("toastNotification");
-            document.getElementById("toastTitle").textContent = title;
-            document.getElementById("toastMsg").textContent = message;
-            toast.classList.remove("translate-x-full");
+        function showScanResultModal(title, desc, details, type = "success") {
+            const modal = document.getElementById("scanResultModal");
+            const iconDiv = document.getElementById("scanResultIcon");
             
-            if (toastTimer) clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => {
-                closeToast();
-            }, 6000);
+            document.getElementById("scanResultTitle").textContent = title;
+            document.getElementById("scanResultDesc").textContent = desc;
+            document.getElementById("scanResultDetails").textContent = details;
+
+            if (type === "success") {
+                iconDiv.className = "w-16 h-16 rounded-2xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-3xl mx-auto border border-emerald-500/30";
+                iconDiv.innerHTML = `<i class="fa-solid fa-check"></i>`;
+            } else {
+                iconDiv.className = "w-16 h-16 rounded-2xl bg-rose-600/20 text-rose-400 flex items-center justify-center text-3xl mx-auto border border-rose-500/30";
+                iconDiv.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i>`;
+            }
+
+            modal.classList.remove("hidden");
         }
 
-        function closeToast() {
-            const toast = document.getElementById("toastNotification");
-            toast.classList.add("translate-x-full");
-            if (toastTimer) clearTimeout(toastTimer);
+        function closeScanModal(continueScanning = false) {
+            document.getElementById("scanResultModal").classList.add("hidden");
+            isProcessingScan = false;
+            if (continueScanning) {
+                // Ensure scanner is active if user wants to continue immediately
+                const stopBtn = document.getElementById("stopBtn");
+                if (stopBtn && stopBtn.classList.contains("hidden")) {
+                    startScanner();
+                }
+            }
         }
 
         function playBeep(type = "success") {
@@ -399,7 +421,6 @@
                         saveDataLocally();
                         renderInventoryTable();
                         populateCategoryDropdown();
-                        if (!isSilent) showToast("Real-Time Sync", "Successfully updated data!");
                     }
                 })
                 .catch(err => {
@@ -454,7 +475,7 @@
             const threshold = parseInt(document.getElementById("newProdThreshold").value) || 200;
 
             if (!name) {
-                showToast("Error", "Please enter product name.");
+                alert("Please enter product name.");
                 return;
             }
 
@@ -472,7 +493,7 @@
             document.getElementById("newProdQty").value = "10";
             document.getElementById("newProdThreshold").value = "200";
 
-            showToast("Instant Save", `Added ${name} (${sku})`);
+            showScanResultModal("New Item Saved!", `${name} (${sku})`, `Initial Stock: ${qty} units`, "success");
             syncToGoogleSheets(newItem.sku, newItem.qty, "ADD_ITEM", newItem);
         }
 
@@ -536,7 +557,6 @@
             if (isProcessingScan) return;
             isProcessingScan = true;
             processScanCode(decodedText.trim());
-            setTimeout(() => { isProcessingScan = false; }, 1500);
         }
 
         function onScanError(error) {}
@@ -556,7 +576,7 @@
             if (!item) {
                 playBeep("error");
                 updateLastScanUI(false, `SKU not found: ${code}`, "Please check if SKU is correct.");
-                showToast("Scan Error", `SKU not found: ${code}`);
+                showScanResultModal("SKU Not Found", `Code: ${code}`, "Please check if the QR code is correct.", "error");
                 return;
             }
 
@@ -566,7 +586,7 @@
                 if (item.qty < qtyChange) {
                     playBeep("error");
                     alert(`Insufficient stock! Current stock for ${item.name} is only ${item.qty}.`);
-                    showToast("Error", `Insufficient stock for ${item.name}!`);
+                    showScanResultModal("Insufficient Stock", item.name, `Current stock is only ${item.qty} units.`, "error");
                     return;
                 }
                 item.qty -= qtyChange;
@@ -593,8 +613,13 @@
             renderInventoryTable();
             renderLogs();
 
-            // Toast with OK button popup
-            showToast(actionTitle, `${item.name} (${item.sku}): ${actionText}. New stock: ${item.qty}`);
+            // Pop out modal with "Continue to Scan" and "OK" buttons
+            showScanResultModal(
+                actionTitle, 
+                `${item.name} (${item.sku})`, 
+                `${actionText} | New Stock Balance: ${item.qty} units`, 
+                "success"
+            );
 
             syncToGoogleSheets(item.sku, item.qty, currentMode, null, qtyChange);
         }
@@ -692,7 +717,7 @@
         function saveWebhookConfig() {
             webhookUrl = document.getElementById("webhookUrlInput").value.trim();
             localStorage.setItem("memorabbylia_webhook", webhookUrl);
-            showToast("Saved", "Webhook URL saved successfully!");
+            alert("Webhook URL saved successfully!");
             closeConfigModal();
             checkWebhookVisibility();
             fetchDataFromSheet(false);
@@ -751,7 +776,7 @@
             if (confirm("Reset local inventory data to default?")) {
                 localStorage.removeItem("memorabbylia_inventory");
                 loadSavedData();
-                showToast("Reset", "Inventory reset!");
+                alert("Inventory reset!");
             }
         }
     </script>
