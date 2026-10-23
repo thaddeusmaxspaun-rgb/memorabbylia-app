@@ -212,7 +212,7 @@
             <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
                 <i class="fa-solid fa-circle-plus text-indigo-400"></i> Add New Souvenir Item
             </h3>
-            <p class="text-xs text-slate-400">Fill in the item details. This will be saved and synced directly to your Google Sheet INVENTORY tab.</p>
+            <p class="text-xs text-slate-400">Fill in the item details. Categories are pulled live from your Google Sheet.</p>
 
             <div class="space-y-3">
                 <div>
@@ -223,13 +223,7 @@
                     <div>
                         <label class="text-[11px] font-semibold text-slate-300 block mb-1">Category</label>
                         <select id="newProdCategory" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-                            <option value="Accessories">Accessories</option>
-                            <option value="Fragrance">Fragrance</option>
-                            <option value="Home Fragrance">Home Fragrance</option>
-                            <option value="Bags & Accessories">Bags & Accessories</option>
-                            <option value="Personal Care">Personal Care</option>
-                            <option value="Souvenir Pack">Souvenir Pack</option>
-                            <option value="Packaging & Dispenser">Packaging & Dispenser</option>
+                            <option value="">Loading categories...</option>
                         </select>
                     </div>
                     <div>
@@ -239,7 +233,7 @@
                 </div>
                 <div>
                     <label class="text-[11px] font-semibold text-slate-300 block mb-1">Reorder Threshold</label>
-                    <input type="number" id="newProdThreshold" value="5" min="0" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                    <input type="number" id="newProdThreshold" value="200" min="0" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
                 </div>
             </div>
 
@@ -314,6 +308,7 @@
     <!-- Application JavaScript Logic -->
     <script>
         let inventory = [];
+        let categories = [];
         let logs = [];
         let currentMode = "IN";
         let html5QrCode = null;
@@ -331,6 +326,18 @@
             { sku: "PPC-LTH-RNDM-CLR-08", name: "Passport Cover", category: "Leather Goods / Keychains & Key Organizers", qty: 0, threshold: 200 },
             { sku: "EVP-LTH-RNDM-CLR-09", name: "Envelope Holder", category: "Leather Goods / Keychains & Key Organizers", qty: 65, threshold: 200 },
             { sku: "UTP-LTH-RNDM-CLR-10", name: "Utility Pouch", category: "Leather Goods / Keychains & Key Organizers", qty: 24, threshold: 200 }
+        ];
+
+        const defaultCategories = [
+            "Leather Goods / Keychains & Key Organizers",
+            "Fragrance",
+            "Home Fragrance",
+            "Accessories",
+            "Bags & Accessories",
+            "Personal Care",
+            "Souvenir Pack",
+            "Packaging & Dispenser",
+            "Gift Set Box"
         ];
 
         function playBeep(type = "success") {
@@ -380,27 +387,52 @@
                 fetch(webhookUrl)
                     .then(res => res.json())
                     .then(data => {
-                        if (data.status === "success" && data.inventory && data.inventory.length > 0) {
-                            inventory = data.inventory;
+                        if (data.status === "success") {
+                            if (data.inventory && data.inventory.length > 0) {
+                                inventory = data.inventory;
+                            }
+                            if (data.categories && data.categories.length > 0) {
+                                categories = data.categories;
+                            } else {
+                                categories = [...defaultCategories];
+                            }
                             saveData();
                             renderInventoryTable();
+                            populateCategoryDropdown();
                         }
                     })
                     .catch(err => {
                         const savedInv = localStorage.getItem("memorabbylia_inventory");
                         inventory = savedInv ? JSON.parse(savedInv) : [...defaultInventory];
+                        categories = [...defaultCategories];
                         renderInventoryTable();
+                        populateCategoryDropdown();
                     });
             } else {
                 const savedInv = localStorage.getItem("memorabbylia_inventory");
                 inventory = savedInv ? JSON.parse(savedInv) : [...defaultInventory];
+                categories = [...defaultCategories];
                 renderInventoryTable();
+                populateCategoryDropdown();
             }
+        }
+
+        function populateCategoryDropdown() {
+            const select = document.getElementById("newProdCategory");
+            if (!select) return;
+            select.innerHTML = "";
+            categories.forEach(cat => {
+                const opt = document.createElement("option");
+                opt.value = cat;
+                opt.textContent = cat;
+                select.appendChild(opt);
+            });
         }
 
         function saveData() {
             localStorage.setItem("memorabbylia_inventory", JSON.stringify(inventory));
             localStorage.setItem("memorabbylia_logs", JSON.stringify(logs));
+            localStorage.setItem("memorabbylia_categories", JSON.stringify(categories));
         }
 
         function setScanMode(mode) {
@@ -433,7 +465,7 @@
             const name = document.getElementById("newProdName").value.trim();
             const category = document.getElementById("newProdCategory").value;
             const qty = parseInt(document.getElementById("newProdQty").value) || 0;
-            const threshold = parseInt(document.getElementById("newProdThreshold").value) || 5;
+            const threshold = parseInt(document.getElementById("newProdThreshold").value) || 200;
 
             if (!name) {
                 alert("Please enter a product name.");
@@ -452,7 +484,7 @@
 
             document.getElementById("newProdName").value = "";
             document.getElementById("newProdQty").value = "10";
-            document.getElementById("newProdThreshold").value = "5";
+            document.getElementById("newProdThreshold").value = "200";
 
             syncNewItemToGoogleSheets(newItem);
             alert(`Souvenir "${name}" added successfully with SKU: ${sku}!`);
@@ -644,9 +676,9 @@
                 const tr = document.createElement("tr");
                 tr.className = "hover:bg-slate-700/40 transition";
 
-                const isLow = item.qty <= (item.threshold || 5);
+                const isLow = item.qty <= (item.threshold || 200);
                 const statusBadge = isLow 
-                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">Low Stock</span>`
+                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">REORDER</span>`
                     : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">OK</span>`;
 
                 tr.innerHTML = `
@@ -716,30 +748,10 @@
         function saveWebhookConfig() {
             webhookUrl = document.getElementById("webhookUrlInput").value.trim();
             localStorage.setItem("memorabbylia_webhook", webhookUrl);
-            alert("Webhook URL saved successfully! Master Inventory is now unlocked.");
+            alert("Webhook URL saved successfully! Master Inventory unlocked and categories loaded.");
             closeConfigModal();
             checkWebhookVisibility();
             loadSavedData();
-        }
-
-        function syncToGoogleSheets(sku, newQty, action, qtyChange) {
-            if (!webhookUrl) return;
-
-            const now = new Date();
-            const formattedTimestamp = `As of ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
-
-            fetch(webhookUrl, {
-                method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    sku: sku,
-                    newQty: newQty,
-                    action: action,
-                    qtyChange: qtyChange,
-                    formattedTimestamp: formattedTimestamp
-                })
-            }).catch(err => console.error("Sheets sync error:", err));
         }
 
         function exportInventoryToCSV() {
