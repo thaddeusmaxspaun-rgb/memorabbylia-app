@@ -4,16 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MemorABBYlia Souvenir QR Inventory Scanner</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- HTML5 QR Code Library -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <!-- QRCode JS Generator -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        #reader { width: 100% !important; border-radius: 0.75rem; overflow: hidden; }
         #reader video { object-fit: cover !important; border-radius: 0.75rem; }
     </style>
 </head>
@@ -26,7 +21,7 @@
         </div>
         <div>
             <div id="toastTitle" class="text-xs font-bold">Tagumpay!</div>
-            <div id="toastMsg" class="text-[11px] text-slate-400">Na-save na ang item.</div>
+            <div id="toastMsg" class="text-[11px] text-slate-400">Na-sync na ang data.</div>
         </div>
     </div>
 
@@ -38,8 +33,8 @@
                     <i class="fa-solid fa-qrcode text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold leading-tight text-white">MemorABBYlia Souvenir Shop</h1>
-                    <p class="text-xs text-slate-400">Inventory Scanner & Manager</p>
+                    <h1 class="text-lg font-bold leading-tight text-white">MemorABBYlia Souvenirs</h1>
+                    <p class="text-xs text-slate-400">Real-Time QR Inventory & Auto-Sync</p>
                 </div>
             </div>
 
@@ -50,7 +45,7 @@
                 <button onclick="openConfigModal()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium rounded-lg border border-slate-600 transition flex items-center gap-1.5">
                     <i class="fa-solid fa-link text-emerald-400"></i> Webhook
                 </button>
-                <button onclick="resetDataPrompt()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg border border-slate-600 transition">
+                <button onclick="manualRefreshData()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg border border-slate-600 transition">
                     <i class="fa-solid fa-rotate"></i> Refresh
                 </button>
             </div>
@@ -62,12 +57,12 @@
         <!-- Top Section: Scanner & Controls -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-            <!-- Square QR Camera Scanner Panel (Left) -->
+            <!-- Scanner Panel (Left) -->
             <div class="lg:col-span-6 bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4">
                 
                 <div class="flex items-center justify-between">
                     <h2 class="text-base font-semibold text-slate-100 flex items-center gap-2">
-                        <i class="fa-solid fa-qrcode text-indigo-400"></i> QR Code Scanner
+                        <i class="fa-solid fa-camera text-indigo-400"></i> Camera Scanner
                     </h2>
                     <span id="scanStatusBadge" class="px-2.5 py-1 text-xs rounded-full bg-slate-700 text-slate-300 font-medium">
                         Ready
@@ -77,16 +72,16 @@
                 <!-- Mode Toggles: Stock In vs Stock Out -->
                 <div class="grid grid-cols-2 gap-3 p-1.5 bg-slate-900/80 rounded-xl border border-slate-700">
                     <button id="modeInBtn" onclick="setScanMode('IN')" class="py-2.5 px-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition bg-emerald-600 text-white shadow">
-                        <i class="fa-solid fa-circle-plus text-base"></i> Stock In (+ IN)
+                        <i class="fa-solid fa-circle-plus text-base"></i> Dagdag Stock (+ IN)
                     </button>
                     <button id="modeOutBtn" onclick="setScanMode('OUT')" class="py-2.5 px-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition bg-slate-800 text-slate-400 hover:text-slate-200">
-                        <i class="fa-solid fa-circle-minus text-base"></i> Stock Out (- OUT)
+                        <i class="fa-solid fa-circle-minus text-base"></i> Bawas Stock (- OUT)
                     </button>
                 </div>
 
                 <!-- Quantity Step -->
                 <div class="flex items-center justify-between bg-slate-900/50 p-3 rounded-xl border border-slate-700">
-                    <label class="text-xs font-medium text-slate-300">Quantity per Scan:</label>
+                    <label class="text-xs font-medium text-slate-300">Dami bawat Scan (Qty Per Scan):</label>
                     <div class="flex items-center space-x-2">
                         <button onclick="adjustScanQty(-1)" class="w-8 h-8 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold flex items-center justify-center">-</button>
                         <input type="number" id="scanQtyInput" value="1" min="1" class="w-16 text-center bg-slate-800 border border-slate-600 rounded-lg py-1 font-bold text-emerald-400 focus:outline-none">
@@ -94,15 +89,14 @@
                     </div>
                 </div>
 
-                <!-- Square QR Camera Viewport -->
-                <div class="relative bg-slate-900 rounded-xl overflow-hidden border border-slate-700 aspect-square max-w-sm mx-auto flex items-center justify-center">
+                <!-- QR Camera Viewport -->
+                <div class="relative bg-slate-900 rounded-xl overflow-hidden border border-slate-700 aspect-video flex items-center justify-center">
                     <div id="reader" class="w-full h-full"></div>
-                    <div id="scannerOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 p-4 text-center z-10">
-                        <i class="fa-solid fa-qrcode text-5xl text-indigo-400 mb-3 animate-pulse"></i>
-                        <p class="text-sm text-slate-300 font-medium">Square QR Code Scanner</p>
-                        <p class="text-xs text-slate-500 mt-1 max-w-xs">Align QR code within target area.</p>
-                        <button onclick="startScanner()" class="mt-4 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg shadow-lg transition flex items-center gap-2">
-                            <i class="fa-solid fa-power-off"></i> Open Camera
+                    <div id="scannerOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 p-4 text-center">
+                        <i class="fa-solid fa-barcode text-4xl text-slate-500 mb-2"></i>
+                        <p class="text-sm text-slate-300 font-medium">I-click ang button para simulan ang scanner</p>
+                        <button onclick="startScanner()" class="mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg shadow-lg transition">
+                            <i class="fa-solid fa-power-off mr-1.5"></i> Open Camera
                         </button>
                     </div>
                 </div>
@@ -111,24 +105,24 @@
                     <button onclick="stopScanner()" id="stopBtn" class="hidden text-rose-400 hover:text-rose-300 font-medium">
                         <i class="fa-solid fa-stop text-xs"></i> Stop Camera
                     </button>
-                    <span>Manual SKU Input Below</span>
+                    <span>Manual Input Below</span>
                 </div>
 
-                <!-- Manual SKU Input -->
+                <!-- Manual Code Input -->
                 <div class="flex gap-2">
-                    <input type="text" id="manualSkuInput" placeholder="Enter or Paste Product ID" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:border-indigo-500 focus:outline-none">
+                    <input type="text" id="manualSkuInput" placeholder="Enter or Paste SKU (e.g., SKU-LTH-01)" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:border-indigo-500 focus:outline-none">
                     <button onclick="submitManualScan()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition">
                         Submit
                     </button>
                 </div>
             </div>
 
-            <!-- Last Scanned Visual Banner & Logs (Right) -->
+            <!-- Last Scanned Banner & Transaction History (Right) -->
             <div class="lg:col-span-6 space-y-6">
                 
                 <div id="lastScanCard" class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-3">
                     <div class="flex justify-between items-center">
-                        <span class="text-xs uppercase tracking-wider font-semibold text-slate-400">Latest Scan</span>
+                        <span class="text-xs uppercase tracking-wider font-semibold text-slate-400">Pinakabagong Scan</span>
                         <span id="lastScanTime" class="text-xs font-mono text-slate-500">--:--:--</span>
                     </div>
 
@@ -137,31 +131,25 @@
                             <i class="fa-solid fa-box-archive"></i>
                         </div>
                         <div>
-                            <div id="lastScanTitle" class="font-bold text-slate-200 text-base">No items scanned yet</div>
-                            <div id="lastScanSub" class="text-xs text-slate-400">Scan a product QR Code to update stock.</div>
+                            <div id="lastScanTitle" class="font-bold text-slate-200 text-base">Wala pang na-i-scan</div>
+                            <div id="lastScanSub" class="text-xs text-slate-400">I-scan ang QR Code ng produkto para ma-update ang stock.</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Recent Activity Logs -->
+                <!-- Recent Activity Log -->
                 <div class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-3">
                     <div class="flex justify-between items-center">
                         <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
                             <i class="fa-solid fa-clock-rotate-left text-amber-400"></i> Recent Scan Log
                         </h3>
-                        <div class="flex items-center gap-3">
-                            <button onclick="exportLogsToCSV()" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 transition">
-                                <i class="fa-solid fa-file-csv"></i> Download Log
-                            </button>
-                            <span class="text-slate-600">|</span>
-                            <button onclick="clearLogsPrompt()" class="text-xs text-rose-400 hover:text-rose-300 font-medium flex items-center gap-1 transition">
-                                <i class="fa-solid fa-trash-can"></i> Clear Log
-                            </button>
-                        </div>
+                        <button onclick="exportLogsToCSV()" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium">
+                            <i class="fa-solid fa-file-csv"></i> Download Log
+                        </button>
                     </div>
 
                     <div class="overflow-y-auto max-h-56 pr-1 space-y-2" id="logsContainer">
-                        <div class="text-xs text-slate-500 text-center py-6">No scan history available.</div>
+                        <div class="text-xs text-slate-500 text-center py-6">Walang history ng scan.</div>
                     </div>
                 </div>
 
@@ -169,14 +157,15 @@
 
         </div>
 
-        <!-- Master Inventory Table (Hidden by default until Webhook is configured) -->
+        <!-- Inventory Database & Live Sheet Overview -->
         <div id="inventoryTableSection" class="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-xl space-y-4 hidden">
+            
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-base font-bold text-white flex items-center gap-2">
-                        <i class="fa-solid fa-boxes-stacked text-indigo-400"></i> Inventory Master Sheet
+                        <i class="fa-solid fa-boxes-stacked text-indigo-400"></i> Inventory Master Sheet (Real-Time Sync)
                     </h2>
-                    <p class="text-xs text-slate-400">Manage items, view QR codes, and add new souvenirs.</p>
+                    <p class="text-xs text-slate-400">Awtomatikong nag-a-update sa Google Sheet at live data.</p>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2">
@@ -193,6 +182,7 @@
                 </div>
             </div>
 
+            <!-- Table -->
             <div class="overflow-x-auto rounded-xl border border-slate-700">
                 <table class="w-full text-left text-xs text-slate-300">
                     <thead class="bg-slate-900 text-slate-400 uppercase font-mono border-b border-slate-700">
@@ -210,6 +200,7 @@
                     </tbody>
                 </table>
             </div>
+
         </div>
 
     </main>
@@ -223,7 +214,7 @@
             <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
                 <i class="fa-solid fa-circle-plus text-indigo-400"></i> Add New Souvenir Item
             </h3>
-            <p class="text-xs text-slate-400">Fill in the item details. Categories are pulled live from your Google Sheet.</p>
+            <p class="text-xs text-slate-400">Direktang mase-save at mabilis na mag-i-sync sa iyong Google Sheet.</p>
 
             <div class="space-y-3">
                 <div>
@@ -250,36 +241,8 @@
 
             <div class="flex justify-end gap-2 pt-3">
                 <button onclick="closeAddModal()" class="px-4 py-2 bg-slate-700 text-slate-300 text-xs font-medium rounded-lg">Cancel</button>
-                <button onclick="saveNewSouvenir()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow">Save & Sync to Sheet</button>
+                <button onclick="saveNewSouvenir()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow">Save & Real-Time Sync</button>
             </div>
-        </div>
-    </div>
-
-    <!-- Modal: After Scan Confirmation Popup -->
-    <div id="scanResultModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-800 rounded-2xl border border-slate-700 max-w-sm w-full p-6 text-center space-y-4 relative shadow-2xl">
-            <div id="modalIconContainer" class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-inner">
-                <i id="modalIcon" class="fa-solid"></i>
-            </div>
-            <div>
-                <h3 id="modalHeadline" class="text-lg font-bold text-slate-100">Inventory Added!</h3>
-                <p id="modalProductName" class="text-sm font-semibold text-indigo-400 mt-0.5">Product Name</p>
-                <p id="modalSkuCode" class="text-xs font-mono text-slate-400">SKU-000</p>
-            </div>
-            <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-700 flex justify-around items-center">
-                <div>
-                    <span class="text-[10px] uppercase tracking-wider text-slate-500 block font-semibold">Action</span>
-                    <span id="modalActionText" class="text-xs font-bold text-emerald-400">+1 Added</span>
-                </div>
-                <div class="h-6 w-px bg-slate-700"></div>
-                <div>
-                    <span class="text-[10px] uppercase tracking-wider text-slate-500 block font-semibold">New Stock</span>
-                    <span id="modalNewStock" class="text-xs font-mono font-bold text-white">0 units</span>
-                </div>
-            </div>
-            <button onclick="dismissScanResultModal()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl transition shadow-lg flex items-center justify-center gap-2">
-                <i class="fa-solid fa-check text-base"></i> OK
-            </button>
         </div>
     </div>
 
@@ -293,12 +256,12 @@
             <div class="p-4 bg-white rounded-xl inline-block shadow-inner mx-auto" id="qrcodeContainer"></div>
             <p id="qrModalSub" class="text-xs font-mono text-indigo-400 font-semibold">SKU-000</p>
             <button onclick="window.print()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-lg transition">
-                <i class="fa-solid fa-print"></i> Print QR Label
+                <i class="fa-solid fa-print"></i> Print Label
             </button>
         </div>
     </div>
 
-    <!-- Modal: Webhook Configuration -->
+    <!-- Modal: Google Sheets Webhook Settings -->
     <div id="configModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-slate-800 rounded-2xl border border-slate-700 max-w-xl w-full p-6 space-y-4 relative shadow-2xl">
             <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
@@ -307,7 +270,7 @@
             <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
                 <i class="fa-brands fa-google-drive text-emerald-400"></i> Connect Google Sheets Live Sync
             </h3>
-            <p class="text-xs text-slate-300">Paste your Google Apps Script Web App URL below:</p>
+            <p class="text-xs text-slate-300">Ilagay ang Google Apps Script Web App URL:</p>
             <input type="url" id="webhookUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-emerald-300 focus:outline-none focus:border-indigo-500">
             <div class="flex justify-end gap-2 pt-2">
                 <button onclick="closeConfigModal()" class="px-4 py-2 bg-slate-700 text-slate-300 text-xs font-medium rounded-lg">Cancel</button>
@@ -316,7 +279,7 @@
         </div>
     </div>
 
-    <!-- Application JavaScript Logic -->
+    <!-- Application Script Logic -->
     <script>
         let inventory = [];
         let categories = [];
@@ -324,20 +287,6 @@
         let currentMode = "IN";
         let html5QrCode = null;
         let webhookUrl = "";
-        let isProcessingScan = false;
-
-        const defaultInventory = [
-            { sku: "KEY-STP-RNDM-CLR-01", name: "Keychain Strap with Belt Clip", category: "Leather Goods / Keychains & Key Organizers", qty: 414, threshold: 200 },
-            { sku: "TAG-LTH-RNDM-CLR-02", name: "Luggage Tag", category: "Leather Goods / Keychains & Key Organizers", qty: 528, threshold: 200 },
-            { sku: "GLS-LTH-RNDM-CLR-03", name: "Eyeglasses Case", category: "Leather Goods / Keychains & Key Organizers", qty: 89, threshold: 200 },
-            { sku: "BAG-LTH-RNDM-CLR-04", name: "Bag Tag", category: "Leather Goods / Keychains & Key Organizers", qty: 85, threshold: 200 },
-            { sku: "COP-LTH-RNDM-CLR-05", name: "Coin Purse", category: "Leather Goods / Keychains & Key Organizers", qty: 310, threshold: 200 },
-            { sku: "CDH-LTH-RNDM-CLR-06", name: "Card Holder", category: "Leather Goods / Keychains & Key Organizers", qty: 216, threshold: 200 },
-            { sku: "PPH-LTH-RNDM-CLR-07", name: "Passport Holder", category: "Leather Goods / Keychains & Key Organizers", qty: 148, threshold: 200 },
-            { sku: "PPC-LTH-RNDM-CLR-08", name: "Passport Cover", category: "Leather Goods / Keychains & Key Organizers", qty: 0, threshold: 200 },
-            { sku: "EVP-LTH-RNDM-CLR-09", name: "Envelope Holder", category: "Leather Goods / Keychains & Key Organizers", qty: 65, threshold: 200 },
-            { sku: "UTP-LTH-RNDM-CLR-10", name: "Utility Pouch", category: "Leather Goods / Keychains & Key Organizers", qty: 24, threshold: 200 }
-        ];
 
         const defaultCategories = [
             "Leather Goods / Keychains & Key Organizers",
@@ -351,11 +300,10 @@
             "Gift Set Box"
         ];
 
-        function showToast(title, message, type = "success") {
+        function showToast(title, message) {
             const toast = document.getElementById("toastNotification");
             document.getElementById("toastTitle").textContent = title;
             document.getElementById("toastMsg").textContent = message;
-            
             toast.classList.remove("translate-x-full");
             setTimeout(() => {
                 toast.classList.add("translate-x-full");
@@ -382,6 +330,13 @@
             renderLogs();
             updateModeUI();
             checkWebhookVisibility();
+
+            // Real-Time Auto Polling: Kunin ang data mula sa Google Sheet tuwing 8 segundo kung may webhook na
+            setInterval(() => {
+                if (webhookUrl && webhookUrl.trim() !== "") {
+                    fetchDataFromSheet(true); // silent background fetch
+                }
+            }, 8000);
         });
 
         function checkWebhookVisibility() {
@@ -406,52 +361,47 @@
             logs = savedLogs ? JSON.parse(savedLogs) : [];
 
             if (webhookUrl && webhookUrl.trim() !== "") {
-                fetch(webhookUrl)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.status === "success") {
-                            if (data.inventory && data.inventory.length > 0) {
-                                inventory = data.inventory;
-                            }
-                            if (data.categories && data.categories.length > 0) {
-                                categories = data.categories;
-                            } else {
-                                categories = [...defaultCategories];
-                            }
-                            saveData();
-                            renderInventoryTable();
-                            populateCategoryDropdown();
-                        }
-                    })
-                    .catch(err => {
-                        const savedInv = localStorage.getItem("memorabbylia_inventory");
-                        inventory = savedInv ? JSON.parse(savedInv) : [...defaultInventory];
-                        categories = [...defaultCategories];
-                        renderInventoryTable();
-                        populateCategoryDropdown();
-                    });
+                fetchDataFromSheet(false);
             } else {
-                const savedInv = localStorage.getItem("memorabbylia_inventory");
-                inventory = savedInv ? JSON.parse(savedInv) : [...defaultInventory];
                 categories = [...defaultCategories];
-                renderInventoryTable();
                 populateCategoryDropdown();
             }
         }
 
-        function populateCategoryDropdown() {
-            const select = document.getElementById("newProdCategory");
-            if (!select) return;
-            select.innerHTML = "";
-            categories.forEach(cat => {
-                const opt = document.createElement("option");
-                opt.value = cat;
-                opt.textContent = cat;
-                select.appendChild(opt);
-            });
+        function fetchDataFromSheet(isSilent = false) {
+            if (!webhookUrl) return;
+            fetch(webhookUrl)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        if (data.inventory && data.inventory.length > 0) {
+                            inventory = data.inventory;
+                        }
+                        if (data.categories && data.categories.length > 0) {
+                            categories = data.categories;
+                        } else {
+                            categories = [...defaultCategories];
+                        }
+                        saveDataLocally();
+                        renderInventoryTable();
+                        populateCategoryDropdown();
+                        if (!isSilent) showToast("Real-Time Sync", "Tagumpay na nakuha ang pinakabagong data!");
+                    }
+                })
+                .catch(err => {
+                    if (!isSilent) console.error("Sync error:", err);
+                });
         }
 
-        function saveData() {
+        function manualRefreshData() {
+            if (!webhookUrl) {
+                alert("Ilagay muna ang Webhook URL.");
+                return;
+            }
+            fetchDataFromSheet(false);
+        }
+
+        function saveDataLocally() {
             localStorage.setItem("memorabbylia_inventory", JSON.stringify(inventory));
             localStorage.setItem("memorabbylia_logs", JSON.stringify(logs));
             localStorage.setItem("memorabbylia_categories", JSON.stringify(categories));
@@ -490,7 +440,7 @@
             const threshold = parseInt(document.getElementById("newProdThreshold").value) || 200;
 
             if (!name) {
-                showToast("Error", "Ilagay ang pangalan ng produkto.", "error");
+                showToast("Error", "Ilagay ang pangalan ng produkto.");
                 return;
             }
 
@@ -500,7 +450,7 @@
 
             const newItem = { sku, name, category, qty, threshold };
             inventory.push(newItem);
-            saveData();
+            saveDataLocally();
             renderInventoryTable();
             closeAddModal();
 
@@ -508,38 +458,27 @@
             document.getElementById("newProdQty").value = "10";
             document.getElementById("newProdThreshold").value = "200";
 
-            // Instant UI response, sync runs in background without blocking
-            showToast("Matagumpay!", `Nalagay na ang ${name} (${sku})`);
-            syncNewItemToGoogleSheets(newItem);
+            showToast("Instant Save", `Naidagdag na ang ${name} (${sku})`);
+            syncToGoogleSheets(newItem.sku, newItem.qty, "ADD_ITEM", newItem);
         }
 
-        function syncNewItemToGoogleSheets(item) {
-            if (!webhookUrl) return;
-
-            const now = new Date();
-            const formattedTimestamp = `As of ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
-
-            fetch(webhookUrl, {
-                method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    action: "ADD_ITEM",
-                    sku: item.sku,
-                    name: item.name,
-                    category: item.category,
-                    qty: item.qty,
-                    threshold: item.threshold,
-                    formattedTimestamp: formattedTimestamp
-                })
-            }).catch(err => console.error("Sheets sync error:", err));
+        function populateCategoryDropdown() {
+            const select = document.getElementById("newProdCategory");
+            if (!select) return;
+            select.innerHTML = "";
+            categories.forEach(cat => {
+                const opt = document.createElement("option");
+                opt.value = cat;
+                opt.textContent = cat;
+                select.appendChild(opt);
+            });
         }
 
         function startScanner() {
             document.getElementById("scannerOverlay").classList.add("hidden");
             document.getElementById("stopBtn").classList.remove("hidden");
-            document.getElementById("scanStatusBadge").textContent = "Camera Active";
-            document.getElementById("scanStatusBadge").className = "px-2.5 py-1 text-xs rounded-full bg-indigo-900 text-indigo-300 border border-indigo-700 animate-pulse font-medium";
+            document.getElementById("scanStatusBadge").textContent = "Scanning...";
+            document.getElementById("scanStatusBadge").className = "px-2.5 py-1 text-xs rounded-full bg-indigo-900/80 text-indigo-300 border border-indigo-700 animate-pulse font-medium";
 
             if (!html5QrCode) {
                 html5QrCode = new Html5Qrcode("reader");
@@ -547,11 +486,11 @@
 
             html5QrCode.start(
                 { facingMode: "environment" },
-                { fps: 15, qrbox: 250, aspectRatio: 1.0 },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
                 onScanSuccess,
                 onScanError
             ).catch(err => {
-                showToast("Error", "Hindi mabuksan ang camera.", "error");
+                alert("Hindi mabuksan ang camera.");
                 stopScanner();
             });
         }
@@ -570,10 +509,12 @@
             }
         }
 
+        let isProcessingScan = false;
         function onScanSuccess(decodedText) {
             if (isProcessingScan) return;
             isProcessingScan = true;
             processScanCode(decodedText.trim());
+            setTimeout(() => { isProcessingScan = false; }, 1500);
         }
 
         function onScanError(error) {}
@@ -601,13 +542,13 @@
             } else {
                 if (item.qty < qtyChange) {
                     playBeep("error");
-                    showToast("Error", `Kulang ang stock para sa ${item.name}!`, "error");
+                    alert(`Kulang ang stock para sa ${item.name}!`);
                     return;
                 }
                 item.qty -= qtyChange;
             }
 
-            saveData();
+            saveDataLocally();
             playBeep("success");
 
             const actionText = currentMode === "IN" ? `+${qtyChange} Stock Added` : `-${qtyChange} Stock Deducted`;
@@ -621,13 +562,13 @@
                 newQty: item.qty
             });
             if (logs.length > 50) logs.pop();
-            saveData();
+            saveDataLocally();
 
             updateLastScanUI(true, `${item.name} (${item.sku})`, `${actionText} | New Stock: ${item.qty} units`, currentMode);
             renderInventoryTable();
             renderLogs();
 
-            syncToGoogleSheets(item.sku, item.qty, currentMode, qtyChange);
+            syncToGoogleSheets(item.sku, item.qty, currentMode, null, qtyChange);
         }
 
         function updateLastScanUI(success, title, sub, mode = "IN") {
@@ -687,7 +628,7 @@
         function renderLogs() {
             const container = document.getElementById("logsContainer");
             if (logs.length === 0) {
-                container.innerHTML = `<div class="text-xs text-slate-500 text-center py-6">No scan history available.</div>`;
+                container.innerHTML = `<div class="text-xs text-slate-500 text-center py-6">Walang history ng scan.</div>`;
                 return;
             }
 
@@ -707,18 +648,6 @@
             `).join("");
         }
 
-        function clearLogsPrompt() {
-            if (logs.length === 0) {
-                showToast("Info", "Wala nang laman ang logs.");
-                return;
-            }
-            if (confirm("I-clear ang scan logs?")) {
-                logs = [];
-                saveData();
-                renderLogs();
-            }
-        }
-
         function showQrModal(sku, name) {
             document.getElementById("qrModalTitle").textContent = name;
             document.getElementById("qrModalSub").textContent = sku;
@@ -735,29 +664,37 @@
         function saveWebhookConfig() {
             webhookUrl = document.getElementById("webhookUrlInput").value.trim();
             localStorage.setItem("memorabbylia_webhook", webhookUrl);
-            showToast("Tagumpay!", "Na-save ang Webhook URL!");
+            showToast("Tagumpay", "Na-save ang Webhook URL!");
             closeConfigModal();
             checkWebhookVisibility();
-            loadSavedData();
+            fetchDataFromSheet(false);
         }
 
-        function syncToGoogleSheets(sku, newQty, action, qtyChange) {
+        function syncToGoogleSheets(sku, newQty, action, itemObj = null, qtyChange = 1) {
             if (!webhookUrl) return;
 
             const now = new Date();
             const formattedTimestamp = `As of ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
 
+            let payload = {
+                sku: sku,
+                newQty: newQty,
+                action: action,
+                qtyChange: qtyChange,
+                formattedTimestamp: formattedTimestamp
+            };
+
+            if (action === "ADD_ITEM" && itemObj) {
+                payload.name = itemObj.name;
+                payload.category = itemObj.category;
+                payload.threshold = itemObj.threshold;
+            }
+
             fetch(webhookUrl, {
                 method: "POST",
                 mode: "no-cors",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    sku: sku,
-                    newQty: newQty,
-                    action: action,
-                    qtyChange: qtyChange,
-                    formattedTimestamp: formattedTimestamp
-                })
+                body: JSON.stringify(payload)
             }).catch(err => console.error("Sheets sync error:", err));
         }
 
@@ -779,14 +716,6 @@
             link.href = URL.createObjectURL(blob);
             link.download = filename;
             link.click();
-        }
-
-        function resetDataPrompt() {
-            if (confirm("I-reset ang local inventory data sa default?")) {
-                localStorage.removeItem("memorabbylia_inventory");
-                loadSavedData();
-                showToast("Info", "Na-reset ang inventory!");
-            }
         }
     </script>
 </body>
