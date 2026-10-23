@@ -263,7 +263,7 @@
         </div>
     </div>
 
-    <!-- Modal: Google Sheets Webhook Settings (Cleaned up) -->
+    <!-- Modal: Google Sheets Webhook Settings -->
     <div id="configModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-slate-800 rounded-2xl border border-slate-700 max-w-lg w-full p-6 space-y-4 relative shadow-2xl">
             <button onclick="closeConfigModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
@@ -459,6 +459,7 @@
         function populateCategoryDropdown() {
             const select = document.getElementById("newProdCategory");
             if (!select) return;
+            const currentValue = select.value; // Preserve current selection
             select.innerHTML = "";
             categories.forEach(cat => {
                 const opt = document.createElement("option");
@@ -466,6 +467,9 @@
                 opt.textContent = cat;
                 select.appendChild(opt);
             });
+            if (currentValue && categories.includes(currentValue)) {
+                select.value = currentValue; // Restore selection
+            }
         }
 
         function startScanner() {
