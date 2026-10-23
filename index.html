@@ -4,13 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MemorABBYlia Souvenir QR Inventory Scanner</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- HTML5 QR Code Library -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <!-- QRCode JS Generator -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         #reader { width: 100% !important; border-radius: 0.75rem; overflow: hidden; }
@@ -313,7 +309,7 @@
             toast.classList.remove("translate-x-full");
             setTimeout(() => {
                 toast.classList.add("translate-x-full");
-            }, 3000);
+            }, 3500);
         }
 
         function playBeep(type = "success") {
@@ -548,6 +544,7 @@
             if (!item) {
                 playBeep("error");
                 updateLastScanUI(false, `SKU not found: ${code}`, "Please check if SKU is correct.");
+                showToast("Scan Error", `SKU not found: ${code}`);
                 return;
             }
 
@@ -557,6 +554,7 @@
                 if (item.qty < qtyChange) {
                     playBeep("error");
                     alert(`Insufficient stock! Current stock for ${item.name} is only ${item.qty}.`);
+                    showToast("Error", `Insufficient stock for ${item.name}!`);
                     return;
                 }
                 item.qty -= qtyChange;
@@ -565,7 +563,8 @@
             saveDataLocally();
             playBeep("success");
 
-            const actionText = currentMode === "IN" ? `+${qtyChange} Stock Added` : `-${qtyChange} Stock Deducted`;
+            const actionTitle = currentMode === "IN" ? "Stock Added Successfully!" : "Stock Deducted Successfully!";
+            const actionText = currentMode === "IN" ? `+${qtyChange} Added` : `-${qtyChange} Deducted`;
             
             logs.unshift({
                 timestamp: new Date().toLocaleTimeString(),
@@ -581,6 +580,9 @@
             updateLastScanUI(true, `${item.name} (${item.sku})`, `${actionText} | New Stock: ${item.qty} units`, currentMode);
             renderInventoryTable();
             renderLogs();
+
+            // Explicit Toast Message showing product is added or deducted
+            showToast(actionTitle, `${item.name} (${item.sku}): ${actionText}. New stock: ${item.qty}`);
 
             syncToGoogleSheets(item.sku, item.qty, currentMode, null, qtyChange);
         }
@@ -692,7 +694,7 @@
 
             let payload = {
                 sku: sku,
-                qty: itemObj ? itemObj.qty : newQty, // Tinitiyak na naipapasa ang tamang Initial Quantity
+                qty: itemObj ? itemObj.qty : newQty,
                 newQty: newQty,
                 action: action,
                 qtyChange: qtyChange,
