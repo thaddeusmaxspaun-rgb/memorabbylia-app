@@ -28,11 +28,8 @@
                     +1 Unit | New Balance: 25
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-2 pt-2">
-                <button onclick="closeScanModal(true)" class="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-qrcode"></i> Continue
-                </button>
-                <button onclick="closeScanModal(false)" class="py-2.5 px-4 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold text-xs rounded-xl border border-slate-600 transition">
+            <div class="pt-2">
+                <button onclick="closeScanModal()" class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow transition">
                     OK
                 </button>
             </div>
@@ -334,20 +331,10 @@
             modal.classList.remove("hidden");
         }
 
-        function closeScanModal(continueScanning = false) {
+        function closeScanModal() {
             document.getElementById("scanResultModal").classList.add("hidden");
             isProcessingScan = false;
-            
-            if (continueScanning) {
-                // Keep scanning or ensure camera stays active/ready
-                const stopBtn = document.getElementById("stopBtn");
-                if (stopBtn && stopBtn.classList.contains("hidden")) {
-                    startScanner();
-                }
-            } else {
-                // Close/stop the camera when OK is clicked
-                stopScanner();
-            }
+            stopScanner();
         }
 
         function playBeep(type = "success") {
@@ -620,7 +607,7 @@
             renderInventoryTable();
             renderLogs();
 
-            // Pop out modal with "Continue Scan" and "OK & Close Cam" buttons
+            // Pop out modal with single OK button and close camera
             showScanResultModal(
                 actionTitle, 
                 `${item.name} (${item.sku})`, 
