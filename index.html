@@ -19,6 +19,17 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
 
+    <!-- Toast Notification Banner -->
+    <div id="toastNotification" class="fixed top-5 right-5 z-50 transform translate-x-full transition-all duration-300 bg-slate-800 border border-emerald-500/50 text-slate-100 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+        <div id="toastIcon" class="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 flex items-center justify-center">
+            <i class="fa-solid fa-check"></i>
+        </div>
+        <div>
+            <div id="toastTitle" class="text-xs font-bold">Tagumpay!</div>
+            <div id="toastMsg" class="text-[11px] text-slate-400">Na-save na ang item.</div>
+        </div>
+    </div>
+
     <!-- Header Navigation -->
     <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-lg">
         <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
@@ -340,6 +351,17 @@
             "Gift Set Box"
         ];
 
+        function showToast(title, message, type = "success") {
+            const toast = document.getElementById("toastNotification");
+            document.getElementById("toastTitle").textContent = title;
+            document.getElementById("toastMsg").textContent = message;
+            
+            toast.classList.remove("translate-x-full");
+            setTimeout(() => {
+                toast.classList.add("translate-x-full");
+            }, 3000);
+        }
+
         function playBeep(type = "success") {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -468,7 +490,7 @@
             const threshold = parseInt(document.getElementById("newProdThreshold").value) || 200;
 
             if (!name) {
-                alert("Please enter a product name.");
+                showToast("Error", "Ilagay ang pangalan ng produkto.", "error");
                 return;
             }
 
@@ -486,8 +508,9 @@
             document.getElementById("newProdQty").value = "10";
             document.getElementById("newProdThreshold").value = "200";
 
+            // Instant UI response, sync runs in background without blocking
+            showToast("Matagumpay!", `Nalagay na ang ${name} (${sku})`);
             syncNewItemToGoogleSheets(newItem);
-            alert(`Souvenir "${name}" added successfully with SKU: ${sku}!`);
         }
 
         function syncNewItemToGoogleSheets(item) {
@@ -528,7 +551,7 @@
                 onScanSuccess,
                 onScanError
             ).catch(err => {
-                alert("Camera permission denied or camera not available.");
+                showToast("Error", "Hindi mabuksan ang camera.", "error");
                 stopScanner();
             });
         }
@@ -569,23 +592,19 @@
 
             if (!item) {
                 playBeep("error");
-                updateLastScanUI(false, `SKU Not Found: ${code}`, "Please check if the SKU code is correct.");
-                showScanResultModal("SKU Not Found", code, code, "Error", 0, "error");
+                updateLastScanUI(false, `SKU Not Found: ${code}`, "Pakisuri ang SKU code.");
                 return;
             }
 
             if (currentMode === "IN") {
                 item.qty += qtyChange;
-                showScanResultModal("Inventory Added!", item.name, item.sku, `+${qtyChange} Added`, item.qty, "IN");
             } else {
                 if (item.qty < qtyChange) {
                     playBeep("error");
-                    alert(`Insufficient stock! Current stock for ${item.name} is only ${item.qty}.`);
-                    showScanResultModal("Insufficient Stock!", item.name, item.sku, "Error", item.qty, "error");
+                    showToast("Error", `Kulang ang stock para sa ${item.name}!`, "error");
                     return;
                 }
                 item.qty -= qtyChange;
-                showScanResultModal("Inventory Deducted!", item.name, item.sku, `-${qtyChange} Deducted`, item.qty, "OUT");
             }
 
             saveData();
@@ -609,38 +628,6 @@
             renderLogs();
 
             syncToGoogleSheets(item.sku, item.qty, currentMode, qtyChange);
-        }
-
-        function showScanResultModal(headline, productName, sku, actionText, newStock, mode) {
-            document.getElementById("modalHeadline").textContent = headline;
-            document.getElementById("modalProductName").textContent = productName;
-            document.getElementById("modalSkuCode").textContent = sku;
-            document.getElementById("modalActionText").textContent = actionText;
-            document.getElementById("modalNewStock").textContent = newStock + " units";
-
-            const iconContainer = document.getElementById("modalIconContainer");
-            const icon = document.getElementById("modalIcon");
-
-            if (mode === "IN") {
-                iconContainer.className = "w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto bg-emerald-900/60 text-emerald-400 border border-emerald-500/50";
-                icon.className = "fa-solid fa-circle-check";
-                document.getElementById("modalActionText").className = "text-xs font-bold text-emerald-400";
-            } else if (mode === "OUT") {
-                iconContainer.className = "w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto bg-rose-900/60 text-rose-400 border border-rose-500/50";
-                icon.className = "fa-solid fa-circle-minus";
-                document.getElementById("modalActionText").className = "text-xs font-bold text-rose-400";
-            } else {
-                iconContainer.className = "w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto bg-amber-900/60 text-amber-400 border border-amber-500/50";
-                icon.className = "fa-solid fa-triangle-exclamation";
-                document.getElementById("modalActionText").className = "text-xs font-bold text-amber-400";
-            }
-
-            document.getElementById("scanResultModal").classList.remove("hidden");
-        }
-
-        function dismissScanResultModal() {
-            document.getElementById("scanResultModal").classList.add("hidden");
-            isProcessingScan = false;
         }
 
         function updateLastScanUI(success, title, sub, mode = "IN") {
@@ -722,10 +709,10 @@
 
         function clearLogsPrompt() {
             if (logs.length === 0) {
-                alert("Scan history is already empty.");
+                showToast("Info", "Wala nang laman ang logs.");
                 return;
             }
-            if (confirm("Clear scan logs?")) {
+            if (confirm("I-clear ang scan logs?")) {
                 logs = [];
                 saveData();
                 renderLogs();
@@ -748,10 +735,30 @@
         function saveWebhookConfig() {
             webhookUrl = document.getElementById("webhookUrlInput").value.trim();
             localStorage.setItem("memorabbylia_webhook", webhookUrl);
-            alert("Webhook URL saved successfully! Master Inventory unlocked and categories loaded.");
+            showToast("Tagumpay!", "Na-save ang Webhook URL!");
             closeConfigModal();
             checkWebhookVisibility();
             loadSavedData();
+        }
+
+        function syncToGoogleSheets(sku, newQty, action, qtyChange) {
+            if (!webhookUrl) return;
+
+            const now = new Date();
+            const formattedTimestamp = `As of ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+
+            fetch(webhookUrl, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    sku: sku,
+                    newQty: newQty,
+                    action: action,
+                    qtyChange: qtyChange,
+                    formattedTimestamp: formattedTimestamp
+                })
+            }).catch(err => console.error("Sheets sync error:", err));
         }
 
         function exportInventoryToCSV() {
@@ -775,10 +782,10 @@
         }
 
         function resetDataPrompt() {
-            if (confirm("Reset local inventory data to default?")) {
+            if (confirm("I-reset ang local inventory data sa default?")) {
                 localStorage.removeItem("memorabbylia_inventory");
                 loadSavedData();
-                alert("Inventory reset!");
+                showToast("Info", "Na-reset ang inventory!");
             }
         }
     </script>
